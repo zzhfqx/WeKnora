@@ -366,17 +366,13 @@ check_remote_dev_connectivity() {
         return 0
     fi
 
-    local db_port="${DB_PORT:-5432}"
-    local redis_port
-    redis_port="${REDIS_ADDR#*:}"
-    if [ "$redis_port" = "$REDIS_ADDR" ]; then
-        redis_port=6379
-    fi
-    local docreader_port="${DOCREADER_PORT:-50051}"
+    # Parse DB_HOST and DB_PORT
+    local db_host="${DB_HOST}"
+    local db_port="${DB_PORT:-125432}"
 
     log_info "检查远程基础设施连通性 (${host})..."
     local failed=0
-    for spec in "PostgreSQL:${host}:${db_port}" "Redis:${host}:${redis_port}" "DocReader:${host}:${docreader_port}"; do
+    for spec in "PostgreSQL:${db_host}:${db_port}" "Redis:${REDIS_ADDR}" "DocReader:${DOCREADER_ADDR}"; do
         local name="${spec%%:*}"
         local rest="${spec#*:}"
         local h="${rest%%:*}"
@@ -468,15 +464,17 @@ start_app() {
     # 远程开发模式（DEV_REMOTE_HOST 或 .env.local 已设地址）则保留 .env/.env.local 中的值
     if [ -n "${DEV_REMOTE_HOST:-}" ]; then
         log_info "远程开发模式: 基础设施 → ${DEV_REMOTE_HOST}"
-        export DB_HOST="${DB_HOST:-$DEV_REMOTE_HOST}"
-        export REDIS_ADDR="${REDIS_ADDR:-$DEV_REMOTE_HOST:6379}"
-        export DOCREADER_ADDR="${DOCREADER_ADDR:-$DEV_REMOTE_HOST:50051}"
-        export MINIO_ENDPOINT="${MINIO_ENDPOINT:-$DEV_REMOTE_HOST:9000}"
-        export MILVUS_ADDRESS="${MILVUS_ADDRESS:-$DEV_REMOTE_HOST:19530}"
-        export NEO4J_URI="${NEO4J_URI:-bolt://$DEV_REMOTE_HOST:7687}"
-        export QDRANT_HOST="${QDRANT_HOST:-$DEV_REMOTE_HOST}"
-        if [ -z "${LANGFUSE_HOST:-}" ] || [ "$LANGFUSE_HOST" = "http://langfuse-web:3000" ]; then
-            export LANGFUSE_HOST="http://${DEV_REMOTE_HOST}:3000"
+        export DB_HOST="${DEV_REMOTE_HOST}"
+        # 在远程开发模式下，无论 .env 如何设置，都必须使用开发模式基础设施的端口
+        export DB_PORT="65432"
+        export REDIS_ADDR="${DEV_REMOTE_HOST}:16379"
+        export DOCREADER_ADDR="${DEV_REMOTE_HOST}:15051"
+        export MINIO_ENDPOINT="${DEV_REMOTE_HOST}:19000"
+        export MILVUS_ADDRESS="${DEV_REMOTE_HOST}:19530"
+        export NEO4J_URI="bolt://${DEV_REMOTE_HOST}:17687"
+        export QDRANT_HOST="${DEV_REMOTE_HOST}"
+        if [ -z "${LANGFUSE_HOST:-}" ] || [ "$LANGFUSE_HOST" = "http://langfuse-web:3000" ] || [ "$LANGFUSE_HOST" = "http://langfuse-web:13000" ]; then
+            export LANGFUSE_HOST="http://${DEV_REMOTE_HOST}:13000"
         fi
     else
         export DB_HOST=127.0.0.1

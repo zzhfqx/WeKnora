@@ -5,7 +5,7 @@ services:
     image: paradedb/paradedb:v0.22.2-pg17
     container_name: WeKnora-postgres-dev
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "65432:5432"
     environment:
       - POSTGRES_USER=${DB_USER}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
@@ -27,7 +27,7 @@ services:
     image: redis:7.0-alpine
     container_name: WeKnora-redis-dev
     ports:
-      - "${REDIS_PORT:-6379}:6379"
+      - "16379:6379"
     volumes:
       - redis_data_dev:/data
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
@@ -85,8 +85,8 @@ services:
     image: minio/minio:latest
     container_name: WeKnora-minio-dev
     ports:
-      - "${MINIO_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - "19000:9000"
+      - "19001:9001"
     environment:
       - MINIO_ROOT_USER=${MINIO_ACCESS_KEY_ID:-minioadmin}
       - MINIO_ROOT_PASSWORD=${MINIO_SECRET_ACCESS_KEY:-minioadmin}
@@ -215,8 +215,8 @@ services:
       - NEO4J_apoc_import_file_use__neo4j__config=true
       - NEO4JLABS_PLUGINS=["apoc"]
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "17474:7474"
+      - "17687:7687"
     restart: always
     networks:
       - WeKnora-network-dev
@@ -243,7 +243,7 @@ services:
     image: wechatopenai/weknora-docreader:${WEKNORA_VERSION:-latest}
     container_name: WeKnora-docreader-dev
     ports:
-      - "${DOCREADER_PORT:-50051}:50051"
+      - "15051:50051"
     volumes:
       - docreader-tmp-dev:/tmp/docreader
     environment:
@@ -533,7 +533,7 @@ services:
     restart: unless-stopped
     depends_on: *langfuse-dev-depends-on
     ports:
-      - "${LANGFUSE_WEB_PORT:-3000}:3000"
+      - "${LANGFUSE_WEB_PORT:-13000}:3000"
     entrypoint:
       - /bin/sh
       - -ec
