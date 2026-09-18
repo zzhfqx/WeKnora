@@ -1080,6 +1080,15 @@ func (s *wikiIngestService) ProcessWikiFinalize(ctx context.Context, t *asynq.Ta
 	if len(affectedSlugs) > 0 {
 		s.cleanDeadLinks(ctx, payload.KnowledgeBaseID, affectedSlugs, batchCtx)
 		s.injectCrossLinks(ctx, payload.KnowledgeBaseID, affectedSlugs, freshRefs, batchCtx)
+
+		// 抽取实体类页面之间的结构化语义关系
+		if synthesisModelID != "" {
+			if chatModel, mErr := s.modelService.GetChatModel(ctx, synthesisModelID); mErr == nil {
+				s.generatePageRelations(ctx, payload.KnowledgeBaseID, payload.TenantID, affectedSlugs, chatModel)
+			} else {
+				logger.Warnf(ctx, "wiki finalize: get chat model for relation extraction failed: %v", mErr)
+			}
+		}
 	}
 
 	// A retract may leave one or more generated folders empty. Do not prune
@@ -1612,6 +1621,10 @@ func (s *wikiIngestService) extractEntitiesAndConceptsNoUpsert(
 	// summary slugs are code-generated from the knowledge ID and never appear
 	// in the extraction output, so including them just wastes tokens and risks
 	// confusing the model.
+	// 只有 entity/* 和 concept/* 类型的 slug 与 LLM 的 slug 连续性相关——
+	// 摘要页的 slug 是根据知识库 ID 代码生成的，永远不会出现在提取结果中，
+	// 所以把它们放进去只会浪费 token，还可能把模型搞糊涂。
+
 	var prevSlugsText string
 	if len(oldPageSlugs) > 0 {
 		var sb strings.Builder

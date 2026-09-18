@@ -69,6 +69,7 @@ type citationPipelineOutcome struct {
 //
 // Returns (entities, concepts, slugItems, error). On LLM or parse failure it
 // returns an error — the caller can then fall back to the legacy extractor.
+// WikiCandidateSlugPrompt（候选slug提取，第一遍）
 func (s *wikiIngestService) extractCandidateSlugs(
 	ctx context.Context,
 	chatModel chat.Chat,
@@ -253,6 +254,7 @@ func renderChunksXML(batch chunkBatch) string {
 // Returns (citations, newSlugs, batchCount). citations is keyed by slug and
 // contains real chunk UUIDs (already translated from batch handles). newSlugs
 // likewise carry real chunk UUIDs in SourceChunks.
+// WikiChunkCitationPrompt（chunk引用分配，第二遍及以后）
 func (s *wikiIngestService) classifyChunkCitations(
 	ctx context.Context,
 	chatModel chat.Chat,

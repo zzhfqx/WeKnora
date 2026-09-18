@@ -1,0 +1,14 @@
+# 生成会话标题提示词模板
+templates:
+  - id: "default_session_title"
+    name: "标准标题"
+    description: "根据用户问题生成简洁的会话标题"
+    default: true
+    content: |
+      根据用户的问题生成一个简短的会话标题。
+
+      要求：
+      - 4-10 个词
+      - 只提取用户问题的意图，不要回答问题本身
+      - 只输出标题，不需要解释
+      - 重要：使用 {{language}} 来生成标题

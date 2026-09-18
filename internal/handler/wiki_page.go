@@ -439,6 +439,42 @@ func (h *WikiPageHandler) GetPage(c *gin.Context) {
 	c.JSON(http.StatusOK, page)
 }
 
+// GetPageRelations godoc
+// @Summary      获取 wiki 页面的实体类关系
+// @Description  查询指定页面的实体-实体关系，分为正向（当前页为源）和反向（当前页为目标）
+// @Tags         Wiki
+// @Accept       json
+// @Produce      json
+// @Param        kb_id  path    string  true  "Knowledge base ID"
+// @Param        slug   path    string  true  "Page slug"
+// @Success      200  {object}  map[string]interface{}
+// @Security     Bearer
+// @Router       /knowledgebase/{kb_id}/wiki/relations/{slug} [get]
+func (h *WikiPageHandler) GetPageRelations(c *gin.Context) {
+	kbID, _, err := h.validateWikiKB(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	slug := getSlugParam(c)
+	if slug == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Page slug is required"})
+		return
+	}
+
+	outgoing, incoming, err := h.wikiService.GetPageRelations(c.Request.Context(), kbID, slug)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"outgoing": outgoing,
+		"incoming": incoming,
+	})
+}
+
 // UpdatePage godoc
 // @Summary      Update a wiki page
 // @Description  Partially update a wiki page by slug. Absent fields keep

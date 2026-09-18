@@ -588,8 +588,10 @@
                 </t-alert>
               </div>
 
-              <!-- Page footer: backlinks + sources -->
-              <footer v-if="!editingPage && (selectedPage.in_links?.length || parsedSourceRefs.length)"
+              <!-- Page footer: backlinks + relations + sources -->
+              <footer
+                v-if="!editingPage && (selectedPage.in_links?.length || parsedSourceRefs.length ||
+                  (pageRelations.outgoing.length + pageRelations.incoming.length > 0))"
                 class="wiki-reader-footer">
                 <div v-if="selectedPage.in_links?.length" class="wiki-reader-footer-row">
                   <span class="wiki-reader-footer-label">{{ $t('knowledgeEditor.wikiBrowser.linkedFrom') }}</span>
@@ -600,6 +602,57 @@
                     </a>
                   </span>
                 </div>
+
+                <!-- 实体类关系 -->
+                <div v-if="pageRelations.outgoing.length || pageRelations.incoming.length"
+                  class="wiki-reader-footer-row wiki-reader-relations">
+                  <span class="wiki-reader-footer-label">本体关系</span>
+                  <div class="wiki-reader-footer-value">
+                    <!-- 正向关系：当前页 → 目标 -->
+                    <div v-if="pageRelations.outgoing.length" class="wiki-relations-group">
+                      <div class="wiki-relations-group-title">指向其他</div>
+                      <div v-for="rel in pageRelations.outgoing" :key="'out-' + rel.target_slug"
+                        class="wiki-relation-item">
+                        <a href="#" class="wiki-content-link wiki-relation-source"
+                          @click.prevent="navigateToSlug(rel.source_slug)">
+                          {{ selectedPage?.title }}
+                        </a>
+                        <t-tooltip :content="rel.description" placement="top">
+                          <div class="wiki-relation-arrow">
+                            <span class="wiki-relation-label">{{ rel.relation_label }}</span>
+                            <span class="wiki-relation-arrow-line">────▶</span>
+                          </div>
+                        </t-tooltip>
+                        <a href="#" class="wiki-content-link wiki-relation-target"
+                          @click.prevent="navigateToSlug(rel.target_slug)">
+                          {{ slugDisplayName(rel.target_slug) }}
+                        </a>
+                      </div>
+                    </div>
+                    <!-- 反向关系：源 → 当前页 -->
+                    <div v-if="pageRelations.incoming.length" class="wiki-relations-group">
+                      <div class="wiki-relations-group-title">被指向</div>
+                      <div v-for="rel in pageRelations.incoming" :key="'in-' + rel.source_slug"
+                        class="wiki-relation-item">
+                        <a href="#" class="wiki-content-link wiki-relation-source"
+                          @click.prevent="navigateToSlug(rel.source_slug)">
+                          {{ slugDisplayName(rel.source_slug) }}
+                        </a>
+                        <t-tooltip :content="rel.description" placement="top">
+                          <div class="wiki-relation-arrow">
+                            <span class="wiki-relation-label">{{ rel.relation_label }}</span>
+                            <span class="wiki-relation-arrow-line">────▶</span>
+                          </div>
+                        </t-tooltip>
+                        <a href="#" class="wiki-content-link wiki-relation-target"
+                          @click.prevent="navigateToSlug(rel.target_slug)">
+                          {{ selectedPage?.title }}
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div v-if="parsedSourceRefs.length" class="wiki-reader-footer-row">
                   <span class="wiki-reader-footer-label">{{ $t('knowledgeEditor.wikiBrowser.sources') }}</span>
                   <span class="wiki-reader-footer-value">
@@ -828,6 +881,7 @@ import {
   searchWikiPages,
   listWikiIssues,
   updateWikiIssueStatus,
+  getWikiPageRelations,
   type WikiPage,
   type WikiFolderNode,
   type WikiGraphData,
@@ -835,6 +889,7 @@ import {
   type WikiPageIssue,
   type WikiIndexGroup,
   type WikiIndexEntryDTO,
+  type WikiPageRelation,
 } from '@/api/wiki'
 
 const router = useRouter()
@@ -868,6 +923,45 @@ const kbFileAccess = computed<ProtectedFileAccessContext>(() => ({
 }))
 const pages = ref<WikiPage[]>([])
 const selectedPage = ref<WikiPage | null>(null)
+
+// 页面实体类关系
+const pageRelations = ref<{ outgoing: WikiPageRelation[]; incoming: WikiPageRelation[] }>({
+  outgoing: [],
+  incoming: [],
+})
+const pageRelationsLoading = ref(false)
+
+// 加载页面的实体类关系
+async function loadPageRelations(slug: string, pageType: string) {
+  // 只对实体类页面加载关系
+  if (pageType !== 'entity') {
+    pageRelations.value = { outgoing: [], incoming: [] }
+    return
+  }
+  pageRelationsLoading.value = true
+  try {
+    const res = await getWikiPageRelations(props.knowledgeBaseId, slug)
+    const data = (res as any).data || res as any
+    pageRelations.value = {
+      outgoing: data.outgoing || [],
+      incoming: data.incoming || [],
+    }
+  } catch (e) {
+    console.error('Failed to load wiki page relations:', e)
+    pageRelations.value = { outgoing: [], incoming: [] }
+  } finally {
+    pageRelationsLoading.value = false
+  }
+}
+
+// 页面切换时加载关系
+watch(selectedPage, (page) => {
+  if (page) {
+    loadPageRelations(page.slug, page.page_type)
+  } else {
+    pageRelations.value = { outgoing: [], incoming: [] }
+  }
+})
 
 // Per-type pagination state for the sidebar. 4万-page wikis used to load
 // the entire page list into `pages.value` at startup (50 pages of 500 =
@@ -6013,6 +6107,64 @@ onUnmounted(() => {
     border-bottom-style: solid;
     text-decoration: none !important;
   }
+}
+
+// 本体关系区块
+.wiki-reader-relations .wiki-reader-footer-value {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.wiki-relations-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.wiki-relations-group-title {
+  font-size: 12px;
+  color: var(--td-text-color-placeholder);
+  font-weight: 500;
+}
+
+.wiki-relation-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.wiki-relation-item .wiki-content-link {
+  // 实体类链接用绿色（success色），与正文wiki链接一致
+  color: var(--td-success-color);
+  border-bottom-color: var(--td-success-color);
+}
+
+.wiki-relation-arrow {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  min-width: 60px;
+}
+
+.wiki-relation-label {
+  font-size: 11px;
+  color: var(--td-text-color-secondary);
+  background: var(--td-bg-color-secondarycontainer);
+  padding: 1px 6px;
+  border-radius: 4px;
+  line-height: 1.4;
+  margin-bottom: 2px;
+  white-space: nowrap;
+}
+
+.wiki-relation-arrow-line {
+  color: var(--td-text-color-placeholder);
+  font-size: 12px;
+  letter-spacing: -1px;
+  line-height: 1;
 }
 
 // ── Empty states ──

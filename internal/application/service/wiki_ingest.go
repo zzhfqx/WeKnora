@@ -23,7 +23,10 @@ import (
 	"github.com/google/uuid"
 	"github.com/hibiken/asynq"
 	"github.com/redis/go-redis/v9"
+	"golang.org/x/sync/errgroup"
 	"golang.org/x/sync/singleflight"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // ErrWikiIngestConcurrent is returned by the wiki ingest handler in Lite mode
@@ -371,6 +374,7 @@ type wikiIngestService struct {
 	audit          interfaces.AuditLogService
 	pendingRepo    interfaces.TaskPendingOpsRepository
 	deadLetterRepo interfaces.TaskDeadLetterRepository
+	db             *gorm.DB      // 用于关系表等扩展表的直接操作
 	redisClient    *redis.Client // nil in Lite mode (no Redis)
 	// spanTracker lets per-document map work surface as a
 	// postprocess.wiki subspan in the knowledge trace tree. Async
@@ -411,6 +415,7 @@ func NewWikiIngestService(
 	audit interfaces.AuditLogService,
 	pendingRepo interfaces.TaskPendingOpsRepository,
 	deadLetterRepo interfaces.TaskDeadLetterRepository,
+	db *gorm.DB,
 	redisClient *redis.Client,
 	spanTracker SpanTracker,
 ) interfaces.TaskHandler {
@@ -425,6 +430,7 @@ func NewWikiIngestService(
 		audit:          audit,
 		pendingRepo:    pendingRepo,
 		deadLetterRepo: deadLetterRepo,
+		db:             db,
 		redisClient:    redisClient,
 		spanTracker:    spanTracker,
 	}
@@ -1871,6 +1877,279 @@ func (s *wikiIngestService) injectCrossLinks(
 	}
 }
 
+// generatePageRelations 在 finalize 阶段抽取受影响页面之间的结构化实体关系。
+// 关系两端是 wiki 页面本身（实体类/概念），页面的完整正文内容作为 LLM
+// 判断关系的依据。结果写入 wiki_page_relations 表。
+//
+// 工作流程：
+//  1. 收集受影响页面的 out_links（仅保留实体/概念类型的页面）
+//  2. 去重 + 过滤已有关系的配对，避免重复计算
+//  3. 对每一对页面，从 DB 加载两个页面的完整 Content
+//  4. 调用 LLM 判断关系类型、标签、描述
+//  5. 批量 upsert 到 wiki_page_relations 表
+func (s *wikiIngestService) generatePageRelations(
+	ctx context.Context,
+	kbID string,
+	tenantID uint64,
+	affectedSlugs []string,
+	chatModel chat.Chat,
+) {
+	if len(affectedSlugs) == 0 || s.db == nil {
+		return
+	}
+
+	// ---- Step 1: 收集候选关系对（受影响页面的 out_links 中指向实体/概念页的对） ----
+	type pairKey struct {
+		source string
+		target string
+	}
+	pairSet := make(map[pairKey]struct{})
+
+	// 先加载所有受影响页面的完整信息（含 out_links 和 page_type）
+	allSlugs := make([]string, 0, len(affectedSlugs))
+	allSlugs = append(allSlugs, affectedSlugs...)
+
+	// 加载受影响页面本身的 out_links
+	pageMap := make(map[string]*types.WikiPage)
+	for _, slug := range affectedSlugs {
+		page, err := s.wikiService.GetPageBySlug(ctx, kbID, slug)
+		if err != nil || page == nil {
+			continue
+		}
+		if page.Status == types.WikiPageStatusArchived || page.PageType == types.WikiPageTypeIndex {
+			continue
+		}
+		pageMap[slug] = page
+		// 把 out_links 也加进来，后面统一加载类型
+		for _, outSlug := range page.OutLinks {
+			if outSlug == slug {
+				continue
+			}
+			if _, ok := pageMap[outSlug]; !ok {
+				allSlugs = append(allSlugs, outSlug)
+			}
+			pairSet[pairKey{source: slug, target: outSlug}] = struct{}{}
+		}
+	}
+
+	if len(pairSet) == 0 {
+		return
+	}
+
+	// 加载所有涉及到的页面（含 out_links 指向的页面）的完整内容
+	// 用 ListBySlugs 先拿轻量信息（类型），再按需加载完整 content
+	slugLiteMap, err := s.wikiService.ListBySlugs(ctx, kbID, allSlugs)
+	if err != nil {
+		logger.Warnf(ctx, "wiki relations: ListBySlugs failed: %v", err)
+		return
+	}
+
+	// 过滤：源和目标都必须是实体/概念页（排除 index、summary 等）
+	filteredPairs := make([]pairKey, 0, len(pairSet))
+	filteredSet := make(map[string]struct{}) // 用于后续查询已有关系
+	for p := range pairSet {
+		srcLite, srcOK := slugLiteMap[p.source]
+		tgtLite, tgtOK := slugLiteMap[p.target]
+		if !srcOK || !tgtOK || srcLite == nil || tgtLite == nil {
+			continue
+		}
+		srcTypeOK := srcLite.PageType == types.WikiPageTypeEntity || srcLite.PageType == types.WikiPageTypeConcept
+		tgtTypeOK := tgtLite.PageType == types.WikiPageTypeEntity || tgtLite.PageType == types.WikiPageTypeConcept
+		if !srcTypeOK || !tgtTypeOK {
+			continue
+		}
+		if srcLite.Status == types.WikiPageStatusArchived || tgtLite.Status == types.WikiPageStatusArchived {
+			continue
+		}
+		filteredPairs = append(filteredPairs, p)
+		filteredSet[p.source+"|"+p.target] = struct{}{}
+	}
+
+	if len(filteredPairs) == 0 {
+		return
+	}
+
+	// ---- Step 2: 过滤已有关系的配对（避免重复计算） ----
+	existingPairs := make(map[string]struct{})
+	var existingRelations []types.WikiPageRelation
+	// 分批查询避免 IN 过长
+	const batchSize = 200
+	for i := 0; i < len(filteredPairs); i += batchSize {
+		end := i + batchSize
+		if end > len(filteredPairs) {
+			end = len(filteredPairs)
+		}
+		batch := filteredPairs[i:end]
+		// 用 OR 条件查询：对于每一对 (source, target)，查是否已存在
+		// 这里简化：查询所有以受影响 slug 为源的关系
+		sourceSlugs := make([]string, 0, len(batch))
+		sourceSet := make(map[string]struct{})
+		for _, p := range batch {
+			if _, ok := sourceSet[p.source]; !ok {
+				sourceSet[p.source] = struct{}{}
+				sourceSlugs = append(sourceSlugs, p.source)
+			}
+		}
+		var batchRel []types.WikiPageRelation
+		if err := s.db.WithContext(ctx).
+			Where("knowledge_base_id = ? AND source_slug IN ?", kbID, sourceSlugs).
+			Find(&batchRel).Error; err != nil {
+			logger.Warnf(ctx, "wiki relations: query existing relations failed: %v", err)
+			return
+		}
+		for _, r := range batchRel {
+			existingRelations = append(existingRelations, r)
+			existingPairs[r.SourceSlug+"|"+r.TargetSlug] = struct{}{}
+		}
+	}
+
+	// 只处理还没有关系的配对
+	newPairs := make([]pairKey, 0, len(filteredPairs))
+	for _, p := range filteredPairs {
+		key := p.source + "|" + p.target
+		if _, ok := existingPairs[key]; !ok {
+			newPairs = append(newPairs, p)
+		}
+	}
+
+	if len(newPairs) == 0 {
+		logger.Infof(ctx, "wiki relations: %d candidate pairs, all already have relations, skipping", len(filteredPairs))
+		return
+	}
+
+	logger.Infof(ctx, "wiki relations: %d candidate pairs, %d new pairs to extract", len(filteredPairs), len(newPairs))
+
+	// ---- Step 3: 对每一对页面，加载完整内容 + 调用 LLM ----
+	// 页面内容缓存（惰性加载）
+	pageContentCache := make(map[string]*types.WikiPage)
+	getFullPage := func(slug string) *types.WikiPage {
+		if p, ok := pageContentCache[slug]; ok {
+			return p
+		}
+		page, err := s.wikiService.GetPageBySlug(ctx, kbID, slug)
+		if err != nil || page == nil {
+			pageContentCache[slug] = nil
+			return nil
+		}
+		pageContentCache[slug] = page
+		return page
+	}
+
+	var newRelations []types.WikiPageRelation
+	var mu sync.Mutex
+	var g errgroup.Group
+	// 控制并发度，避免一次太多 LLM 调用
+	concurrency := 5
+	sem := make(chan struct{}, concurrency)
+
+	for _, p := range newPairs {
+		p := p
+		g.Go(func() error {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+
+			srcPage := getFullPage(p.source)
+			tgtPage := getFullPage(p.target)
+			if srcPage == nil || tgtPage == nil {
+				return nil
+			}
+
+			// 构造提示词数据 —— 传入完整页面内容
+			data := map[string]string{
+				"SourceTitle":   srcPage.Title,
+				"SourceType":    srcPage.PageType,
+				"SourceSummary": srcPage.Summary,
+				"SourceContent": srcPage.Content,
+				"TargetTitle":   tgtPage.Title,
+				"TargetType":    tgtPage.PageType,
+				"TargetSummary": tgtPage.Summary,
+				"TargetContent": tgtPage.Content,
+			}
+
+			resultText, err := s.generateWithTemplate(ctx, chatModel, agent.WikiRelationExtractPrompt, data)
+			if err != nil {
+				logger.Warnf(ctx, "wiki relations: LLM call failed for %s -> %s: %v", p.source, p.target, err)
+				return nil
+			}
+
+			// 解析 JSON 结果
+			resultText = strings.TrimSpace(resultText)
+			// 去掉可能的 markdown 代码块标记
+			resultText = strings.TrimPrefix(resultText, "```json")
+			resultText = strings.TrimPrefix(resultText, "```")
+			resultText = strings.TrimSuffix(resultText, "```")
+			resultText = strings.TrimSpace(resultText)
+
+			var rel struct {
+				RelationType  string  `json:"relation_type"`
+				RelationLabel string  `json:"relation_label"`
+				ReverseLabel  string  `json:"reverse_label"`
+				Description   string  `json:"description"`
+				Confidence    float64 `json:"confidence"`
+			}
+			if err := json.Unmarshal([]byte(resultText), &rel); err != nil {
+				logger.Warnf(ctx, "wiki relations: parse LLM result failed for %s -> %s: %v", p.source, p.target, err)
+				return nil
+			}
+
+			// 没有关系就跳过
+			if rel.RelationType == "" || rel.RelationType == "none" {
+				return nil
+			}
+
+			// 置信度过低也跳过
+			if rel.Confidence < 0.5 {
+				return nil
+			}
+
+			newRel := types.WikiPageRelation{
+				ID:              uuid.New().String(),
+				TenantID:        tenantID,
+				KnowledgeBaseID: kbID,
+				SourceSlug:      p.source,
+				TargetSlug:      p.target,
+				RelationType:    rel.RelationType,
+				RelationLabel:   rel.RelationLabel,
+				ReverseLabel:    rel.ReverseLabel,
+				Description:     rel.Description,
+				Confidence:      rel.Confidence,
+				SourcePageType:  srcPage.PageType,
+				TargetPageType:  tgtPage.PageType,
+				GeneratedBy:     types.WikiEditSourcePipeline,
+				Version:         1,
+			}
+
+			mu.Lock()
+			newRelations = append(newRelations, newRel)
+			mu.Unlock()
+			return nil
+		})
+	}
+
+	if err := g.Wait(); err != nil {
+		logger.Warnf(ctx, "wiki relations: extraction group error: %v", err)
+	}
+
+	if len(newRelations) == 0 {
+		logger.Infof(ctx, "wiki relations: no new relations extracted from %d pairs", len(newPairs))
+		return
+	}
+
+	// ---- Step 4: 批量写入 wiki_page_relations 表 ----
+	// 用 ON CONFLICT 忽略已存在的（幂等）
+	if err := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "knowledge_base_id"}, {Name: "source_slug"}, {Name: "target_slug"}},
+			DoNothing: true,
+		}).
+		Create(&newRelations).Error; err != nil {
+		logger.Warnf(ctx, "wiki relations: batch insert failed: %v", err)
+		return
+	}
+
+	logger.Infof(ctx, "wiki relations: extracted %d new relations from %d pairs", len(newRelations), len(newPairs))
+}
+
 // collectLinkRefs flattens (title + aliases) of all non-system pages into a
 // single linkRef slice suitable for linkifyContent.
 func collectLinkRefs(pages []*types.WikiPage) []linkRef {
@@ -2518,6 +2797,33 @@ func (s *wikiIngestService) deduplicateExtractedBatch(
 // transient 504 from the upstream gateway used to drop the document's
 // summary page permanently. Retries plus failedOps requeuing (see
 // mapOneDocument) turn those events into at-most-a-few-minute hiccups.
+
+// generateWithTemplate 执行一个提示词模板并调用 LLM，
+// 对临时性基础设施错误采用有上限的指数退避重试机制。
+//
+// 重试策略：
+//   - 最多尝试 wikiLLMMaxAttempts 次（首次调用 + 重试）。
+//   - 仅对 isTransientLLMError 判定为「临时性」的错误重试：
+//     HTTP 408/429/5xx、上下文超时（父 ctx 仍然存活时），
+//     或包含 "timeout" / "connection reset" 等通用超时/断连描述的错误。
+//     4xx（除 408/429 外）是调用方错误，直接失败不重试。
+//   - 退避时间以 2 秒为底数指数增长：2s、4s、8s ——
+//     大致等于 wikiLLMBackoffBase * 2^(尝试次数-1)。
+//     会响应 ctx 取消信号，因此任务可以随时中止。
+//
+// 这个函数存在的原因：wiki 入库流程中每个文档会发起多次独立的
+// LLM 调用（要点提取、摘要、去重、引用、引言等），以前上游网关
+// 偶尔返回一个 504 就会导致该文档的摘要页永久缺失。
+// 重试机制 + failedOps 重新入队（见 mapOneDocument）把这类故障
+// 变成了「最多延迟几分钟」的小波动，而不是永久丢失。
+
+// 把 prompt 模板填好变量 → 加上用户自定义要求
+// → 调用 LLM（带重试、去重、缓存）→ 返回生成的文本。
+// 这个函数是 Wiki 生成里所有 LLM 调用的统一入口，
+// 标题、摘要、要点、大纲... 全都走它，区别只是传进去的 promptTpl（模板）
+// 和 data（数据）不一样。
+
+// WiKi LLM调用函数
 func (s *wikiIngestService) generateWithTemplate(ctx context.Context, chatModel chat.Chat, promptTpl string, data map[string]string) (string, error) {
 	tmpl, err := template.New("wiki").Parse(promptTpl)
 	if err != nil {
@@ -2533,6 +2839,22 @@ func (s *wikiIngestService) generateWithTemplate(ctx context.Context, chatModel 
 
 	prompt := buf.String()
 	purpose := wikiPromptPurpose(promptTpl)
+
+	// ========== 调试日志：打印函数入参 ==========
+	logger.Infof(ctx, "[Wiki调试入参] ===== generateWithTemplate 入参 =====")
+	logger.Infof(ctx, "[Wiki调试入参] purpose=%s", purpose)
+	logger.Infof(ctx, "[Wiki调试入参] promptTpl 长度=%d", len(promptTpl))
+	logger.Infof(ctx, "[Wiki调试入参] promptTpl 内容:\n%s", promptTpl)
+	logger.Infof(ctx, "[Wiki调试入参] data 字段列表:")
+	for k, v := range data {
+		preview := v
+		if len(preview) > 100 {
+			preview = preview[:100] + "..."
+		}
+		logger.Infof(ctx, "[Wiki调试入参]   %s = %s (长度=%d)", k, preview, len(v))
+	}
+	logger.Infof(ctx, "[Wiki调试入参] ==================================")
+	// ========== 调试日志结束 ==========
 	messages := []chat.Message{{Role: "user", Content: prompt}}
 	if promptTpl == agent.WikiPageModifyUserPrompt {
 		systemPrompt := types.AppendCustomPromptInstructions(
@@ -2551,6 +2873,17 @@ func (s *wikiIngestService) generateWithTemplate(ctx context.Context, chatModel 
 	}
 	thinking := false
 	opts := &chat.ChatOptions{Temperature: 0.3, Thinking: &thinking, MaxTokens: wikiLLMMaxTokens}
+
+	// ========== 调试日志：打印完整 prompt ==========
+	logger.Infof(ctx, "[Wiki调试] ===== generateWithTemplate 调用开始 =====")
+	logger.Infof(ctx, "[Wiki调试] purpose=%s", purpose)
+	logger.Infof(ctx, "[Wiki调试] model=%s", chatModel.GetModelName())
+	for i, msg := range messages {
+		logger.Infof(ctx, "[Wiki调试] message[%d] role=%s, 长度=%d", i, msg.Role, len(msg.Content))
+		logger.Infof(ctx, "[Wiki调试] message[%d] 内容:\n%s", i, msg.Content)
+	}
+	logger.Infof(ctx, "[Wiki调试] ======================================")
+	// ========== 调试日志结束 ==========
 	prefixFingerprint := chat.PromptPrefixFingerprint(messages, opts)
 	warmupKey := ""
 	if promptTpl == agent.WikiPageModifyUserPrompt {
@@ -2590,6 +2923,17 @@ func (s *wikiIngestService) generateWithTemplate(ctx context.Context, chatModel 
 		for attempt := 1; attempt <= wikiLLMMaxAttempts; attempt++ {
 			response, callErr := chatModel.Chat(ctx, messages, opts)
 			if callErr == nil && response != nil {
+				// ========== 调试日志：打印返回结果 ==========
+				logger.Infof(ctx, "[Wiki调试] ===== LLM 返回结果 =====")
+				logger.Infof(ctx, "[Wiki调试] FinishReason=%s", response.FinishReason)
+				logger.Infof(ctx, "[Wiki调试] Content 长度=%d", len(response.Content))
+				logger.Infof(ctx, "[Wiki调试] Content 内容:\n%s", response.Content)
+				if response.Usage.TotalTokens > 0 {
+					logger.Infof(ctx, "[Wiki调试] Token用量: prompt=%d, completion=%d, total=%d",
+						response.Usage.PromptTokens, response.Usage.CompletionTokens, response.Usage.TotalTokens)
+				}
+				logger.Infof(ctx, "[Wiki调试] ==========================")
+				// ========== 调试日志结束 ==========
 				return response.Content, nil
 			}
 			if callErr == nil {

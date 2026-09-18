@@ -1,0 +1,117 @@
+/*
+ Navicat Premium Dump SQL
+
+ Source Server         : WeKnora-code
+ Source Server Type    : PostgreSQL
+ Source Server Version : 170009 (170009)
+ Source Host           : 192.168.21.10:65432
+ Source Catalog        : WeKnora
+ Source Schema         : public
+
+ Target Server Type    : PostgreSQL
+ Target Server Version : 170009 (170009)
+ File Encoding         : 65001
+
+ Date: 17/09/2026 15:54:10
+*/
+
+
+-- ----------------------------
+-- Table structure for wiki_page_relations
+-- ----------------------------
+DROP TABLE IF EXISTS "public"."wiki_page_relations";
+CREATE TABLE "public"."wiki_page_relations" (
+  "id" varchar(36) COLLATE "pg_catalog"."default" NOT NULL,
+  "tenant_id" int8 NOT NULL,
+  "knowledge_base_id" varchar(36) COLLATE "pg_catalog"."default" NOT NULL,
+  "source_slug" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "target_slug" varchar(255) COLLATE "pg_catalog"."default" NOT NULL,
+  "relation_type" varchar(64) COLLATE "pg_catalog"."default" NOT NULL,
+  "relation_label" varchar(128) COLLATE "pg_catalog"."default" NOT NULL,
+  "reverse_label" varchar(128) COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::character varying,
+  "description" text COLLATE "pg_catalog"."default" NOT NULL DEFAULT ''::text,
+  "confidence" float8 NOT NULL DEFAULT 1.0,
+  "source_page_type" varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+  "target_page_type" varchar(32) COLLATE "pg_catalog"."default" NOT NULL,
+  "generated_by" varchar(16) COLLATE "pg_catalog"."default" NOT NULL DEFAULT 'pipeline'::character varying,
+  "version" int4 NOT NULL DEFAULT 1,
+  "created_at" timestamptz(6) NOT NULL DEFAULT now(),
+  "updated_at" timestamptz(6) NOT NULL DEFAULT now()
+)
+;
+
+-- ----------------------------
+-- Records of wiki_page_relations
+-- ----------------------------
+INSERT INTO "public"."wiki_page_relations" VALUES ('71294d1c-74d4-4f10-9828-0e29b1b86342', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/regulatory-institutions', 'concept/classified-and-local-regulation', 'applies_principle', '适用监管原则', '是...的监管原则', '监管机构类中的银行保险监督管理机构在对财产保险领域的保险条款和保险费率实施监督管理时，实行分类监管与属地监管原则，该原则是监管机构开展相关监管工作遵循的规则。', 0.85, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('4ef43c24-9891-43d7-900f-a550da3eed80', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/unemployment-insurance-contribution', 'concept/unemployment-insurance-fund', 'is_main_source_of', '是...的主要来源', '主要来源于', '失业保险缴费是参保单位和个人按法定标准缴纳失业保险费的行为及相关规则，是失业保险基金的主要来源；失业保险基金的构成中，城镇企业事业单位及职工缴纳的失业保险费是其组成部分的第一项。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('58307bab-3f99-406f-aaac-333482345c28', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-pooling', 'concept/work-injury-insurance-fund', 'governs', '规范统筹管理', '受其统筹管理', '社会保险统筹是社会保险基金统一筹集、管理和调剂使用的制度模式，明确规定工伤保险基金逐步实行省级统筹，工伤保险基金的统筹管理遵循该制度要求。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('80711b30-fcd5-41c3-b5b3-432788536ac5', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/work-injury-insurance-benefits', 'concept/work-injury-insurance-fund', 'funded_by', '由...支付资金', '用于支付', '工伤保险待遇中符合规定的工伤医疗费用、辅助器具配置费用、生活护理费、一次性伤残补助金、伤残津贴、工亡待遇等多项费用均从工伤保险基金支付；工伤保险基金是专项用于支付工伤保险待遇等相关费用的资金，其核心用途之一就是支付工伤保险待遇。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('ab45342d-e75d-4aa8-91af-6a42b233df96', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/work-injury-identification', 'concept/work-injury-insurance-benefits', 'prerequisite_for', '是享受的前提条件', '的享受以其为前提', '工伤认定是社会保险行政部门确认职工受伤是否属于工伤的法律程序，只有经工伤认定确认为工伤或视同工伤的职工，才能依法享受工伤保险待遇，工伤认定是享受工伤保险待遇的前置必要环节。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('e1ef3372-695a-4495-aaed-b5af49e47295', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-rights', 'concept/social-insurance-benefits', 'contains', '包含', '是...的组成部分', '社会保险权益是公民和用人单位在社会保险领域依法享有的权利与利益，其中个人的社会保险权益明确包含依法享受社会保险待遇的权利，社会保险待遇是社会保险权益的核心组成内容之一。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('eec17c84-9725-4e77-bf54-c876cc102a82', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-benefits', 'concept/unemployment-registration', 'prerequisite_for', '的申领前提包含', '是申领的前提条件之一', '社会保险待遇中的失业保险待遇，其领取条件明确要求失业人员已办理失业登记并有求职要求，失业登记是申领失业保险待遇的法定前置程序。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('8a5e7876-1e0b-41cb-9e1a-390f95f41a81', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/unemployment-insurance-coordination', 'concept/unemployment-insurance-fund', 'applies_to', '是针对...的制度模式', '是该制度的作用对象', '失业保险统筹是指失业保险基金在一定行政区域内统一筹集、管理和调剂使用的制度模式，该制度的作用对象为失业保险基金，失业保险基金的统筹调剂规则是失业保险统筹的核心内容。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('220417f2-f3bc-4189-91f1-381856ed0f72', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/work-injury-insurance-rate', 'concept/work-injury-insurance-fund', 'regulates', '影响并调节', '的收支情况受其调节并反作用于其调整', '工伤保险费率是确定工伤保险费缴纳比例的制度，工伤保险费是工伤保险基金的核心构成来源，费率高低直接决定基金收入规模；同时工伤保险基金的收支情况是调整行业差别费率及费率档次的核心依据，二者存在双向的调节关联。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('10c8a565-e267-4300-bd32-4c89daf82f84', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-relationship-transfer', 'concept/social-insurance-rights', 'part_of', '是...的组成部分', '包含', '社会保险权益涵盖个人跨统筹地区就业时社会保险关系随本人转移、缴费年限累计计算的相关权利，社会保险关系转移接续是个人社会保险权益的组成内容之一。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('1f40fc41-6475-43e7-a0aa-652f60e8d8fb', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/social-insurance-funds', 'concept/unemployment-insurance-fund', 'contains', '包含', '属于', '社会保险基金类的涵盖范围明确包含失业保险基金，失业保险基金是社会保险基金五项组成险种之一。', 1, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('31cb659c-fc6e-4d2f-add7-6e332810239a', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-supervision', 'concept/social-insurance-rights', 'supervises', '监督保障', '受...监督保障', '社会保险监督是对社会保险基金收支、管理、投资运营及法律实施情况进行监督的制度体系，其监督内容涵盖与社会保险权益相关的事项，通过监督维护公民和用人单位的社会保险权益。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('3ec25fc3-2745-4f18-bc5b-d3a9ea969324', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-benefits', 'concept/unemployment-insurance-fund', 'funded_by', '由...提供资金支持', '为...提供资金支持', '社会保险待遇中的失业保险待遇所需资金从失业保险基金中支付，同时失业人员领取失业保险金期间的基本医疗保险待遇也由失业保险基金支付相关费用，失业保险基金是对应社会保险待遇的资金来源。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('b910acf7-289d-4491-a674-c592c578d932', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-acts-and-procedures', 'concept/labor-ability-appraisal', 'contains', '包含', '属于', '法律行为与程序类的涵盖范围中明确包含业务办理程序类，而劳动能力鉴定属于业务办理程序类下的具体业务办理程序，因此劳动能力鉴定是法律行为与程序类涵盖的具体程序类别之一。', 0.98, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('c22a9edd-ddaa-4aec-8ef1-b4bd332402f6', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-rights', 'concept/social-insurance-supervision', 'supervised_by', '受...监督', '监督', '社会保险监督体系中，工会等监督主体有权对与职工社会保险权益有关的事项进行监督，社会保险权益相关事项是社会保险监督的覆盖范畴之一。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('635a91a6-07c2-4c04-b8d0-277afe1f5a9c', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-benefits', 'concept/labor-ability-appraisal', 'prerequisite_for', '以...为前提条件', '是...的前提条件', '根据社会保险待遇的内容，工伤职工经劳动能力鉴定丧失劳动能力的，可享受伤残待遇，劳动能力鉴定是工伤职工享受对应工伤保险伤残待遇的法定前提条件。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('e4dee232-7439-4cd1-818e-1a02b46b4bef', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-documents', 'concept/unemployment-registration', 'related_to', '与...相关', '与...相关', '法律文书类涵盖失业登记证明等与失业登记相关的证明类文书，失业登记办理过程中会使用到属于法律文书类的相关凭证，二者存在业务关联。', 0.85, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('ec657e9d-1ca4-4583-b0dd-be91fdfde7ac', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/unemployment-insurance-benefits', 'concept/unemployment-registration', 'prerequisite_for', '的领取前提包含', '是领取的必要前提', '根据两个页面的领取条件内容，失业人员办理失业登记是领取失业保险待遇（含失业保险金及其他相关待遇）的法定必要条件之一，失业保险待遇的获取需以完成失业登记为前提。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('4ed92d13-3c72-4d3c-bdae-18b0aac9e297', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/work-injury-insurance-fund', 'concept/work-injury-insurance-benefits', 'funds', '为...提供资金支付', '由...支付资金', '工伤保险基金是专项基金，其核心用途之一是支付工伤保险待遇；工伤保险待遇中符合规定的各项费用（如工伤医疗费用、伤残补助金、工亡补助金等）主要从工伤保险基金中支取。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('15143f4b-c571-4372-8835-e1222aaaab77', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-contribution', 'concept/social-insurance-benefits', 'precondition_for', '是享受的前提条件', '的享受以...为前提', '社会保险缴费是参保单位和个人向社保机构缴纳费用的行为，社会保险待遇是参保人员符合法定条件时从社保基金获得的物质帮助；根据两个页面内容，享受各险种社会保险待遇均以满足对应缴费年限或完成缴费义务为前提条件，如领取基本养老金需累计缴费满十五年，领取失业保险金需失业前缴费满一年等。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('804dee37-8e24-413c-821d-ada14f0f7613', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-acts-and-procedures', 'concept/unemployment-registration', 'subclass_of', '属于', '包含', '失业登记是社会保险领域的具体业务办理程序，而法律行为与程序类的涵盖范围包含业务办理程序类，且明确将失业登记列入其业务办理程序类及社会保险领域的范畴。', 0.98, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('2b9e0024-e6cf-4a59-91f1-588a126a6c4a', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/unemployment-registration', 'concept/unemployment-insurance-benefits', 'prerequisite_for', '是申领的法定前置程序', '的申领需以办理为前置条件', '失业登记是失业人员申领失业保险待遇的法定程序，领取失业保险金的条件明确要求已办理失业登记，失业保险金自办理失业登记之日起计算。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('77fc73ce-4ca1-4c17-a36e-49c4c35c9059', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-acts-and-procedures', 'concept/work-injury-identification', 'contains', '包含', '属于', '法律行为与程序类的涵盖范围包含业务办理程序类，而工伤认定属于业务办理程序中的具体类型，同时其也属于法律行为与程序类在社会保险领域分布的程序范畴。', 0.98, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('36a768b5-bf16-48e4-9eb2-369d29fffac8', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/labor-ability-appraisal', 'concept/work-injury-identification', 'prerequisite_for', '以...为前置条件', '是...的前置条件', '根据劳动能力鉴定的规定，申请劳动能力鉴定时需要提供工伤认定决定，即工伤认定是开展劳动能力鉴定的前置程序，工伤认定结论是劳动能力鉴定申请的必备材料之一。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('736b92c6-d4f9-4117-bebf-101e408b7393', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-subjects', 'concept/social-insurance-supervision', 'participates_in', '参与', '有参与主体', '法律主体类涵盖的法人、非法人组织、自然人等多种类型主体，在社会保险监督中作为人大、行政部门、工会、用人单位、个人等监督主体或被监督对象参与其中。', 0.9, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('414a7615-658b-4bd6-88f7-4b9af22eb4b4', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/unemployment-insurance-benefits', 'concept/unemployment-insurance-fund', 'funded_by', '由...提供资金支持', '为...提供资金支持', '失业保险待遇是失业人员可享受的各项保障待遇，其相关支出由专门筹集的失业保险基金承担，失业保险基金是失业保险待遇支出的资金来源。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('55fcefe1-2414-4e78-9a1a-24ad3d8fe16c', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-benefits', 'concept/work-injury-insurance-fund', 'funded_by', '由...提供资金支持', '为...提供资金支持', '社会保险待遇中的工伤保险待遇所需资金按照国家规定从工伤保险基金中支付，工伤保险基金是专项用于支付工伤保险待遇等相关费用的资金来源。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('10b62118-5eba-4c8c-87f0-d0f000e9f8a3', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-documents', 'concept/work-injury-identification', 'used_in', '应用于', '使用', '法律文书类中的工伤认定申请表、劳动关系证明材料、医疗诊断证明、职业病诊断证明书、工伤认定决定等文书，是工伤认定程序中申请、认定环节所需或产生的文书凭证，被应用于工伤认定流程中。', 0.9, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('90783a02-6a63-49bd-a999-0036dd82067a', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-subjects', 'concept/industry-self-regulation', 'related_to', '相关于', '相关于', '法律主体类涵盖的行业自律组织（如中国保险行业协会、中国精算师协会）承担行业自律管理职责，二者存在关联关系。', 0.85, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('a79fae78-3b28-419b-974c-0bbe020f3943', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-supervision', 'concept/social-insurance-benefits', 'regulates', '监督', '被监督', '社会保险监督是对社会保险基金收支、管理、投资运营及法律实施情况进行监督的制度体系，其中涵盖对社会保险待遇支付等相关情况的监督，例如对骗取社会保险待遇、经办机构克扣或拒不按时支付社会保险待遇等行为的监管处理。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('ef1ec5bc-c854-4a53-b67c-f9b2edec3007', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/social-insurance-funds', 'concept/social-insurance-benefits', 'funds', '为...提供资金支持', '由...支付资金', '社会保险基金类是依法筹集、专项用于社会保险待遇支付的专项资金类别，参保人员符合法定条件时享受的各项社会保险待遇，所需资金均从对应险种的社会保险基金中支付。', 0.98, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('edc2f396-b858-4ca9-94be-05063b3dc692', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-benefits', 'concept/unemployment-insurance-benefits', 'subclass_of', '包含', '属于', '社会保险待遇涵盖基本养老保险待遇、基本医疗保险待遇、工伤保险待遇、失业保险待遇、生育保险待遇五大险种的待遇项目，失业保险待遇是社会保险待遇的一个子类。', 0.99, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('8f07b7e9-6316-4018-8fdc-bc65bf43f2ca', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/social-insurance-funds', 'concept/work-injury-insurance-fund', 'contains', '包含', '属于', '社会保险基金类的涵盖范围明确包含工伤保险基金，工伤保险基金是社会保险基金的五项组成险种基金之一。', 1, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('00f8ed1c-7d37-4262-9ac8-79d1a5a0f1a5', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/social-insurance-funds', 'concept/social-insurance-supervision', 'supervised_by', '接受...的监督', '监督', '社会保险基金类的收支、管理和投资运营情况，受到社会保险监督体系的全方位监管，社会保险监督涵盖人大监督、行政监督、社会监督等多元主体，均以社会保险基金为核心监督对象。', 0.98, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('17f8443a-c1f1-405d-b61b-17bffda45585', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-subjects', 'concept/work-injury-insurance-benefits', 'has_benefit', '的主体享有', '由法律主体类中的主体享有', '法律主体类中的职工等工伤保险法律关系主体，依法享有工伤保险待遇中的各项权利，工伤保险待遇是针对相关法律主体设定的权益。', 0.9, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('9192520d-caf2-472d-b70c-c3aac1a3f10b', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/work-injury-insurance-benefits', 'concept/labor-ability-appraisal', 'dependent_on', '依赖', '是...的前提条件', '工伤保险待遇中的辅助器具配置、生活护理费发放、伤残待遇享受等均以劳动能力鉴定委员会的鉴定结论为依据，劳动能力鉴定是确定对应工伤保险待遇的必要前提。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('98144adb-3e2a-4c0b-9ed5-f1f22c9d30c0', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/work-injury-insurance-fund', 'concept/labor-ability-appraisal', 'funds', '为...提供资金支持', '费用由...支付', '根据工伤保险基金的用途规定，劳动能力鉴定的相关费用属于工伤保险基金的支付范围，工伤保险基金为劳动能力鉴定工作提供资金保障。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('94339f9f-0643-4ce0-a1cc-dee1064b8cad', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-subjects', 'concept/unemployment-insurance-benefits', 'related_to', '与...相关', '与...相关', '法律主体类中的失业保险法律关系主体（如失业人员、社会保险经办机构等）是失业保险待遇的享受主体或经办管理主体，二者在失业保险法律关系中存在关联。', 0.85, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('6deee6dc-7aa9-410c-8842-b2fdae89160a', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/unemployment-insurance-fund', 'concept/unemployment-insurance-benefits', 'funds', '为...提供资金支持', '由...提供资金保障', '失业保险基金是专门用于失业保险待遇支出的专项基金，失业保险待遇的各项支出均由失业保险基金承担。', 0.98, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('1211b8fd-7096-42f9-931f-e4f200bf6a88', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-benefits', 'concept/work-injury-insurance-benefits', 'subclass_of', '包含', '属于', '社会保险待遇涵盖基本养老保险、基本医疗保险、工伤保险、失业保险、生育保险五大险种的待遇项目，工伤保险待遇是社会保险待遇的一个具体子类。', 0.99, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('407c5420-b19a-4080-b620-f21375e61dab', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-subjects', 'concept/social-insurance-benefits', 'has_right_to', '享有', '由...享有', '法律主体类中的个人（如职工、灵活就业人员等）作为社会保险法律关系的主体，依法享有社会保险待遇，该结论可从两个实体的定义及社会保险法律关系主体的权利描述中得到依据。', 0.9, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('901867db-7644-4dda-8e5f-f3ef2d439cb2', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/insurance-clauses-and-rate-regulation', 'concept/industry-self-regulation', 'includes', '包含', '是...的组成部分', '保险条款与费率监管的制度体系中包含行业自律管理相关内容，中国保险行业协会履行保险条款和保险费率的行业自律管理职责是该监管体系的组成部分。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('750ea59e-1c5e-4f69-9432-873746873c0d', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-contribution', 'concept/work-injury-insurance-fund', 'funds', '为...提供资金来源', '的资金来源于', '社会保险缴费中的工伤保险费缴纳是工伤保险基金的核心构成部分，用人单位缴纳的工伤保险费是工伤保险基金的主要来源，社会保险缴费行为为工伤保险基金提供了资金支撑。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('b64b4b49-6051-4bc1-97ab-4aa9f4b4d916', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'entity/legal-acts-and-procedures', 'concept/social-insurance-supervision', 'part_of', '是...的组成部分', '包含', '法律行为与程序类的涵盖范围中明确包含社会保险领域的社会保险监督检查程序，社会保险监督属于法律行为与程序类下社会保险领域的具体程序类别。', 0.98, 'entity', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('a8f1ac81-6d4d-452f-878d-c74d4c6ef64d', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-benefits', 'concept/work-injury-identification', 'prerequisite_for', '的享受前提包含', '是享受的前提条件之一', '根据社会保险待遇的内容，职工因工作原因受到事故伤害或者患职业病，且经工伤认定的，才能享受工伤保险待遇；工伤认定是职工享受工伤保险待遇（属于社会保险待遇的一种）的法定前置程序。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+INSERT INTO "public"."wiki_page_relations" VALUES ('bc471089-beb3-4e20-8527-208f947608e9', 10000, 'a72c6bea-55f0-4e40-8802-143021adaea3', 'concept/social-insurance-pooling', 'concept/unemployment-insurance-fund', 'applies_to', '适用于', '受...统筹管理', '社会保险统筹是社会保险基金统一筹集、管理和调剂使用的制度模式，失业保险基金属于社会保险基金的一种，实行省级统筹，该统筹制度适用于失业保险基金的管理运作。', 0.9, 'concept', 'concept', 'pipeline', 1, '2026-09-17 07:50:03.093706+00', '2026-09-17 07:50:03.093706+00');
+
+-- ----------------------------
+-- Indexes structure for table wiki_page_relations
+-- ----------------------------
+CREATE INDEX "idx_wiki_relations_kb_source" ON "public"."wiki_page_relations" USING btree (
+  "knowledge_base_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "source_slug" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE UNIQUE INDEX "idx_wiki_relations_kb_source_target" ON "public"."wiki_page_relations" USING btree (
+  "knowledge_base_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "source_slug" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "target_slug" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "idx_wiki_relations_kb_target" ON "public"."wiki_page_relations" USING btree (
+  "knowledge_base_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "target_slug" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+CREATE INDEX "idx_wiki_relations_kb_type" ON "public"."wiki_page_relations" USING btree (
+  "knowledge_base_id" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST,
+  "relation_type" COLLATE "pg_catalog"."default" "pg_catalog"."text_ops" ASC NULLS LAST
+);
+
+-- ----------------------------
+-- Primary Key structure for table wiki_page_relations
+-- ----------------------------
+ALTER TABLE "public"."wiki_page_relations" ADD CONSTRAINT "wiki_page_relations_pkey" PRIMARY KEY ("id");

@@ -511,7 +511,230 @@ wikiIngestService.ProcessWikiFinalize()
 
 ---
 
-## 十三、核心文件索引
+## 十三、系统提示词（Prompt）总览
+
+### 13.1 全局 Prompt 模板目录
+
+项目中所有对话/问答/Agent 的系统提示词模板集中在：
+
+**目录**：`config/prompt_templates/`
+
+| 文件名 | 用途 |
+|--------|------|
+| `system_prompt.yaml` | 知识库对话主系统提示词（`default_kb` 等） |
+| `agent_system_prompt.yaml` | Agent 模式系统提示词（含 Wiki Researcher / Wiki Fixer / Hybrid RAG Wiki 等多种 Agent 预设） |
+| `context_template.yaml` | 上下文拼接模板 |
+| `fallback.yaml` | 无匹配时的兜底回复 |
+| `rewrite.yaml` | 查询改写/重写提示词 |
+| `intent_prompts.yaml` | 意图识别 |
+| `keywords_extraction.yaml` | 关键词提取 |
+| `generate_summary.yaml` | 对话摘要生成 |
+| `generate_session_title.yaml` | 会话标题生成 |
+| `generate_questions.yaml` | 问题生成 |
+| `graph_extraction.yaml` | 知识图谱实体/关系抽取 |
+
+在 `config/config.yaml` 中通过 `xxx_prompt_id` 字段引用模板 ID（如 `default_kb`、`default_rewrite`）。
+
+### 13.2 Wiki Ingest 的 Prompt 在哪里？
+
+**Wiki 部署（ingest 生成）流程不使用 `config/prompt_templates/` 目录。** 所有 Wiki 生成相关的 prompt 均以 Go 常量形式硬编码在：
+
+**文件**：`internal/agent/prompts_wiki.go`
+
+按 pipeline 阶段分布：
+
+| Prompt 常量 | Purpose 标识 | 用途 | 调用位置 |
+|-------------|-------------|------|---------|
+| `WikiSummaryPrompt` | `wiki_summary` | 为新文档生成 Wiki 摘要页 | `wiki_ingest_batch.go:1329` |
+| `WikiKnowledgeExtractPrompt` | `wiki_knowledge_extract` | 从文档提取实体+概念（旧版单 pass） | `wiki_ingest_batch.go:1630` |
+| `WikiCandidateSlugPrompt` | `wiki_candidate_slug` | chunk-cited Pass 0：扫描输出候选 slug 骨架 | `wiki_ingest_cite.go:96` |
+| `WikiChunkCitationPrompt` | `wiki_chunk_citation` | chunk-cited Pass 1..N：批量选 chunk + 引用 | `wiki_ingest_cite.go:283` |
+| `WikiPageModifySystemPrompt` | `wiki_page_modify` | Wiki 页面更新 system 侧（共享规则） | `wiki_ingest.go:2538` |
+| `WikiPageModifyUserPrompt` | `wiki_page_modify` | Wiki 页面更新 user 侧（reduce 阶段核心） | `wiki_ingest_batch.go:2047` |
+| `WikiDeduplicationPrompt` | `wiki_deduplication` | 新提取 items 与现有页面去重 | `wiki_ingest.go:2456` |
+| `WikiTaxonomyPlanPrompt` | `wiki_taxonomy_plan` | 批量分配目录路径（分类规划） | `wiki_ingest_taxonomy.go:83` |
+| `WikiIndexIntroPrompt` | `wiki_index_intro` | 首次创建 Wiki 索引页简介 | `wiki_ingest.go:2163` |
+| `WikiIndexIntroUpdatePrompt` | `wiki_index_intro` | 增量更新 Wiki 索引页简介 | `wiki_ingest.go:2181` |
+
+**调用入口**：`wikiIngestService.generateWithTemplate()`（`wiki_ingest.go:2521`），使用 Go `text/template` 渲染 + 指数退避重试 + singleflight 合并并发请求。
+
+### 13.3 generateWithTemplate 函数详解
+
+`generateWithTemplate` 是 **Wiki 生成流程中所有 LLM 调用的统一入口**。标题生成、摘要、要点提取、去重、引用、大纲... 都走这个函数，区别只是传入的 prompt 模板和数据不同。
+
+> ⚠️ 注意：它只管 Wiki 模块的 LLM 调用，**不是全项目通用的**。对话系统（聊天、Agent、RAG）走的是 `chat.Chat` 接口直接调用，不经过这个函数。
+>
+> 全项目真正的底层统一入口是 `chat.Chat` 接口（`Chat()` / `ChatStream()` 方法），`generateWithTemplate` 内部最终也是调用它。
+
+#### 13.3.0 函数签名与核心参数
+
+```go
+func (s *wikiIngestService) generateWithTemplate(
+    ctx        context.Context,   // 上下文：超时/取消/元数据传递
+    chatModel  chat.Chat,         // LLM 客户端：已初始化好的 chat 接口实例
+    promptTpl  string,           // prompt 模板：含 {{.变量名}} 的预设模板字符串
+    data       map[string]string, // 模板变量：key=变量名，value=实际值
+) (string, error)
+```
+
+**核心理解：**
+
+| 概念 | 说明 |
+|------|------|
+| `promptTpl` | **官方预设的 prompt 模板**（写死在代码里，不是用户填的 |
+| `data` | 模板变量数据，其中 `CustomInstructions` 是**用户自定义提示词**（前端 Wiki 配置里填的） |
+| 调用方式 | **只用非流式**（`Chat()`），Wiki 后台生成不需要流式 |
+| 做了什么 | 模板渲染 → 追加自定义提示词 → 调 LLM（重试+去重+缓存）→ 返回文本 |
+
+#### 13.3.0.1 data 参数结构与自定义提示词机制
+
+**`data` 的类型：** `map[string]string`（字符串字典），key = 模板变量名，value = 实际值。
+
+**每个调用点传的字段不一样**，取决于对应 prompt 模板需要哪些 `{{.变量名}}`。但有几个通用字段几乎每次都有：
+
+| 字段 | 说明 |
+|------|------|
+| `Content` | 主要内容（文档文本、chunk 内容等） |
+| `Language` | 语言（中文/英文等） |
+| `CustomInstructions` | **用户自定义提示词**（前端 Wiki 配置里填的「内容生成要求」「知识提取要求」） |
+| `InstructionScope` | 作用域标签（`wiki_content` 或 `extraction`），写在 XML 标签属性里 |
+
+**典型调用示例（摘要生成）：**
+
+```go
+s.generateWithTemplate(ctx, chatModel, agent.WikiSummaryPrompt, map[string]string{
+    "Content":            content,
+    "Language":           lang,
+    "ExtractedSlugs":     slugListing,
+    "CustomInstructions": batchCtx.ContentInstructions,
+    "InstructionScope":   "wiki_content",
+})
+```
+
+**maskedData vs data：**
+
+| | `data` | `maskedData` |
+|---|------|-----------|
+| 结构 | `map[string]string` | `map[string]string`（key 完全相同） |
+| 图片 URL | 原始 URL | 占位符（如 `img_001`） |
+| 用途 | 原始数据 | 传给 LLM（省 token + 防误处理） |
+
+`maskTemplateDataImageURLs(data)` 生成 maskedData + urlMap（占位符→原始URL 的映射表），LLM 返回后再用 `unmaskImageURLs(content, urlMap)` 还原。
+
+**用户自定义提示词（CustomInstructions）的 3 个要点：**
+
+1. **纯文本，没有占位符** — 用户填什么就是什么，不支持 `{{.变量}}` 模板语法
+2. **追加方式** — 由 `AppendCustomPromptInstructions` 函数用 XML 标签包起来，追加到主 prompt 末尾
+3. **追加位置分两种** — Wiki 页面修改追加到 system prompt，其他场景追加到 user prompt
+
+#### 13.3.1 执行流程（7 步）
+
+```
+输入：promptTpl(模板字符串) + data(变量数据)
+  ↓
+① 解析模板（template.Parse）
+  ↓
+② 屏蔽图片 URL（maskTemplateDataImageURLs）
+  ↓
+③ 渲染模板（template.Execute → 变量填进模板）
+  ↓
+④ 构造 messages + 追加用户自定义提示词
+  ↓
+⑤ 生成缓存键 + 预热键（Prompt Cache）
+  ↓
+⑥ 调用 LLM（指数退避重试 + singleflight 去重合并）
+  ↓
+⑦ 还原图片 URL（unmaskImageURLs） + 返回结果
+输出：生成的文本
+```
+
+#### 13.3.2 每一步详解
+
+**① 解析模板（第 2542 行）**
+
+```go
+tmpl, err := template.New("wiki").Parse(promptTpl)
+```
+
+把含 `{{.变量名}}` 的 prompt 模板字符串编译成 Go template 对象。
+
+**② 屏蔽图片 URL（第 2547 行）**
+
+```go
+maskedData, urlMap := maskTemplateDataImageURLs(data)
+```
+
+把 data 里的图片 URL 替换成占位符（减少 token 消耗，防止 LLM 误处理），同时记录原始 URL。LLM 返回后再替换回来。
+
+**③ 渲染模板（第 2549-2555 行）**
+
+```go
+var buf strings.Builder
+tmpl.Execute(&buf, maskedData)
+prompt := buf.String()
+```
+
+把变量数据填进模板，生成最终的 prompt 文本。`strings.Builder` 是 Go 高效拼接字符串的工具。
+
+**④ 构造 messages + 追加自定义提示词（第 2556-2571 行）**
+
+分两种情况：
+- **Wiki 页面修改**（`WikiPageModifyUserPrompt`）：有独立的 system prompt，自定义指令加在 system 里
+- **其他所有 Wiki 生成**：只有 user prompt，自定义指令直接追加在 user 内容末尾
+
+`AppendCustomPromptInstructions` 把用户自定义的要求（Wiki 配置里的「内容生成要求」「知识提取要求」）用 XML 标签包起来加在 prompt 末尾。
+
+**⑤ 生成缓存键（第 2572-2586 行）**
+
+```go
+prefixFingerprint := chat.PromptPrefixFingerprint(messages, opts)
+warmupKey = chat.BuildPromptCacheKey(tenantID, modelID, purpose, prefixFingerprint)
+```
+
+计算 prompt 前缀的指纹（哈希），用于 Prompt Cache（提示词缓存）。多个文档共享相同的系统提示词前缀时，缓存起来可以省 token。
+
+`purpose`（由 `wikiPromptPurpose` 函数生成）是缓存分类标签，把长 prompt 模板映射成简短标识（如 `wiki_summary`、`wiki_knowledge_extract`），用于日志、缓存键、元数据。
+
+**⑥ 调用 LLM（核心，第 2598-2657 行）**
+
+这一步最复杂，又分 3 层：
+
+| 层级 | 机制 | 说明 |
+|------|------|------|
+| 内层 | `chatModel.Chat()` | 真正发 HTTP 请求给 LLM |
+| 中层 | 指数退避重试 | 临时性错误（408/429/5xx/超时）自动重试，间隔 2s→4s→8s... |
+| 外层 | singleflight 去重 | 相同请求并发时只发 1 次，其余等结果，省 token |
+
+重试策略：
+- 最多 `wikiLLMMaxAttempts` 次
+- 只重试临时性错误，4xx（除 408/429）直接失败
+- 退避时间：`wikiLLMBackoffBase * 2^(attempt-1)`
+
+**⑦ 还原图片 URL + 返回**
+
+```go
+content, _ := result.Val.(string)
+return unmaskImageURLs(content, urlMap), nil
+```
+
+把第 ② 步替换掉的图片 URL 占位符还原成原始 URL。
+
+#### 13.3.3 设计目的
+
+为什么要统一封装成一个函数？
+
+| 特性 | 说明 |
+|------|------|
+| 统一模板渲染 | 所有 Wiki prompt 用同一套模板机制，避免重复代码 |
+| 统一重试策略 | 临时性错误自动重试，避免上游网关抖动导致 Wiki 页面永久缺失 |
+| 统一去重合并 | singleflight 合并相同请求，省钱省 token |
+| 统一缓存机制 | Prompt Cache 预热，提高重复场景的性能 |
+| 统一自定义提示词 | 用户的「内容生成要求」「知识提取要求」统一追加 |
+| 统一日志埋点 | purpose + 指纹，方便排查和统计 |
+
+---
+
+## 十四、核心文件索引
 
 | 层级 | 文件路径 | 核心功能 |
 |---|---|---|

@@ -17,6 +17,7 @@ import (
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
 )
 
 // wikiLinkRegex matches [[wiki-link]] syntax in markdown content
@@ -47,6 +48,7 @@ type wikiPageService struct {
 	kbService       interfaces.KnowledgeBaseService
 	taskPendingRepo interfaces.TaskPendingOpsRepository
 	redisClient     *redis.Client
+	db              *gorm.DB
 }
 
 // NewWikiPageService creates a new wiki page service
@@ -56,6 +58,7 @@ func NewWikiPageService(
 	kbService interfaces.KnowledgeBaseService,
 	taskPendingRepo interfaces.TaskPendingOpsRepository,
 	redisClient *redis.Client,
+	db *gorm.DB,
 ) interfaces.WikiPageService {
 	return &wikiPageService{
 		repo:            repo,
@@ -63,6 +66,7 @@ func NewWikiPageService(
 		kbService:       kbService,
 		taskPendingRepo: taskPendingRepo,
 		redisClient:     redisClient,
+		db:              db,
 	}
 }
 
@@ -1910,4 +1914,40 @@ func (s *wikiPageService) RebuildIndexPage(ctx context.Context, kbID string) err
 	_ = ctx
 	_ = kbID
 	return nil
+}
+
+// GetPageRelations 查询指定页面的实体类关系，分为正向（当前页为源）和反向（当前页为目标）。
+// 只返回实体-实体（entity-entity）之间的关系，概念相关的关系不返回。
+func (s *wikiPageService) GetPageRelations(ctx context.Context, kbID, slug string) (
+	outgoing []types.WikiPageRelation,
+	incoming []types.WikiPageRelation,
+	err error,
+) {
+	if kbID == "" || slug == "" {
+		return nil, nil, nil
+	}
+
+	// 正向关系：当前页作为 source
+	var outRelations []types.WikiPageRelation
+	if qErr := s.db.WithContext(ctx).
+		Where("knowledge_base_id = ? AND source_slug = ? AND source_page_type = ? AND target_page_type = ?",
+			kbID, slug, "entity", "entity").
+		Order("confidence DESC").
+		Limit(50).
+		Find(&outRelations).Error; qErr != nil {
+		return nil, nil, fmt.Errorf("查询正向关系失败: %w", qErr)
+	}
+
+	// 反向关系：当前页作为 target
+	var inRelations []types.WikiPageRelation
+	if qErr := s.db.WithContext(ctx).
+		Where("knowledge_base_id = ? AND target_slug = ? AND source_page_type = ? AND target_page_type = ?",
+			kbID, slug, "entity", "entity").
+		Order("confidence DESC").
+		Limit(50).
+		Find(&inRelations).Error; qErr != nil {
+		return nil, nil, fmt.Errorf("查询反向关系失败: %w", qErr)
+	}
+
+	return outRelations, inRelations, nil
 }

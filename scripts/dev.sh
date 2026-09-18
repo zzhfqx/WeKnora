@@ -12,6 +12,9 @@ NC='\033[0m' # 无颜色
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 
+# 开发模式使用独立的 compose project name，避免与常规部署冲突
+export COMPOSE_PROJECT_NAME="weknora-dev"
+
 # 日志函数
 log_info() {
     printf "%b\n" "${BLUE}[INFO]${NC} $1"
@@ -478,11 +481,12 @@ start_app() {
         fi
     else
         export DB_HOST=127.0.0.1
-        export DOCREADER_ADDR=127.0.0.1:50051
-        export MINIO_ENDPOINT=127.0.0.1:9000
-        export REDIS_ADDR=127.0.0.1:6379
+        export DB_PORT=65432
+        export REDIS_ADDR=127.0.0.1:16379
+        export DOCREADER_ADDR=127.0.0.1:15051
+        export MINIO_ENDPOINT=127.0.0.1:19000
         export MILVUS_ADDRESS=127.0.0.1:19530
-        export NEO4J_URI=bolt://127.0.0.1:7687
+        export NEO4J_URI=bolt://127.0.0.1:17687
         export QDRANT_HOST=127.0.0.1
     fi
     export DOCREADER_TRANSPORT="${DOCREADER_TRANSPORT:-grpc}"

@@ -1,13 +1,25 @@
 package agent
 
-// WikiTaxonomyPlanPrompt assigns a directory path (category) to every entity /
-// concept page produced by ONE ingest batch in a single call, so the whole set
-// lands on one coherent tree that reuses existing folders — instead of each page
-// inventing its own folders in parallel (which diverges worst on the founding
-// batch, when the KB still has no folders to anchor on). The result is applied
-// in reduce only to pages that don't already have a category, so user edits and
-// previously-filed pages are never churned.
-const WikiTaxonomyPlanPrompt = `You are organizing a wiki knowledge base into a navigation directory. Assign each item below to a directory path (category) so the whole set lands on ONE coherent tree.
+// WikiTaxonomyPlanPrompt（分类目录规划提示词）
+// 作用：一次调用为一个摄入批次产生的所有实体/概念页面分配目录路径（分类），
+// 让整组页面落在一棵一致的目录树上并复用已有文件夹，避免每个页面各自
+// 发明文件夹（在知识库首批摄入、还没有任何文件夹时问题最严重）。
+// 结果在 reduce 阶段只应用于尚未分类的页面，不会翻动用户已编辑或已归档的页面。
+//
+// 本体层级定位（重要）：
+//   - 实体类页面（entity/*）= 第二层本体（L2），业务本体的父类/分类
+//   - taxonomy 第一层目录 = 第一层本体（L1），L2 实体类的上一层级分类
+//   L1 是基于所有 L2 实体类抽象出来的最大程度的顶层领域分类（比 OWL 的
+//   Thing 具体，但又是可理解的最顶层）。每个 L2 实体类必定属于一个 L1。
+//   因此实体类页面的 taxonomy 严格只有一级目录，不允许二级子目录。
+//   - 概念页面（concept/*）不受此限制，可保留多级分类（后续会移除概念）。
+const WikiTaxonomyPlanPrompt = `你现在需要给一个Wiki知识库整理本体分类目录。本Wiki采用两层本体结构：
+- L1（第一层本体）= 顶层领域分类，即本提示词生成的目录
+- L2（第二层本体/实体类）= 实体类页面
+
+L1是L2的上一层级分类：每个L2实体类必定属于一个L1。L1比OWL的Thing更具体，但又是基于所有L2实体类能够抽象出来的最大程度的顶层领域分类——归到不能再归、但仍然有明确语义的最顶层。
+
+请把下面每个条目分配到L1顶层领域分类中。
 
 <existing_folders>
 {{.ExistingTaxonomy}}
@@ -18,46 +30,51 @@ const WikiTaxonomyPlanPrompt = `You are organizing a wiki knowledge base into a 
 </items>
 
 <instructions>
-For every item, output a category path: an array of folder labels from broad to narrow (at most 2 levels). The category classifies WHAT the item fundamentally IS (the stable library "shelf" it always sits on), never the role it plays in one document.
+## 对实体类条目（type为entity，即L2本体）
+- **严格只有一级目录**（path数组长度必须为1）。绝不允许二级子目录，避免视觉上造成三层本体的误解。
+- L1分类维度：按**顶层领域**划分，是对所有L2实体类做最大程度抽象后的顶层归类。例如：
+  - "法律主体类"、"法律责任类"、"法律法规类" → 都归到 L1 "法律"
+  - "保险机构类"、"保险产品类" → 都归到 L1 "保险"
+  - "社会保险制度类"、"社会保险基金类" → 都归到 L1 "社会保险"
+- 命名方式：简洁的领域名称（2-4个字），如"法律"、"保险"、"社会保险"、"金融监管"。不要使用"XX相关"、"XX类别"等模糊后缀。
+- 同一L1领域下的所有L2实体类，必须挂在同一个一级目录下，不能分散。
 
-How to choose a path for each item:
-1. If an existing folder in <existing_folders> fits, REUSE its EXACT label (character-for-character). Do NOT invent a synonym folder (e.g. do NOT create "春节习俗" when "春节 / 传统习俗" already fits).
-2. If NO existing folder fits, CREATE a new, broad, durable folder for it (e.g. an organization → "组织", a legal idea → "法律概念", a place → "地点"). The directory does not have to stay small — most items DO have a natural home, so coin a sensible top-level folder rather than leaving them unfiled. Group items of the SAME kind under the SAME new folder so the tree stays coherent.
-3. Only give an empty path [] when an item genuinely belongs to NO durable subject at all. This must be RARE. The absence of a matching existing folder is NOT a reason for []; create a folder instead.
+## 对概念条目（type为concept）
+- 可以有一级或二级目录，按概念的主题领域归类。
+- 分类按照概念的本质主题来分，而不是按照它在某一篇文档里扮演的角色。
 
-Other rules:
-- Group items of the SAME kind under the SAME folder at the SAME depth. Do not file one equivalent item a level deeper than its siblings (e.g. avoid "地点 / 地址 / Address1" next to "地点 / Address2" — pick one consistent depth for equivalent items).
-- Prefer a single broad top-level folder; add a second level only for a genuinely durable sub-domain shared by several items.
-- Do NOT use the item type ("entity"/"concept") as a folder. Do NOT put slashes inside a single label.
-- Every item slug in <items> MUST appear exactly once in the output.
-- Write ALL folder labels in {{.Language}}.
+## 通用规则
+1. 如果<existing_folders>中已经有匹配的文件夹，请**复用精确标签**（一个字都不要改）。不要创造同义词文件夹。
+2. 如果没有匹配的已有文件夹，新建一个宽泛、稳定的顶层领域文件夹。相同领域的条目一定要放在同一个新文件夹下，保持目录结构一致。
+3. 只有当一个条目真的不属于任何持久主题时，才给空路径 []。这种情况必须非常少见。
+4. 不要把条目类型（"entity"/"concept"）当作文件夹名。
+5. 单个文件夹标签内部不要使用斜杠。
+6. <items>中每个条目slug都必须在输出中出现恰好一次。
+7. 所有文件夹标签都使用 {{.Language}} 书写。
 
 ### JSON Formatting Rules
-- Output ONLY valid JSON, no preamble.
-- Do NOT use literal newlines inside JSON string values.
+- 只输出合法JSON，不要前言。
+- JSON字符串值内部不要使用字面换行。
 </instructions>
 
-Output format:
+输出格式：
 {
   "assignments": [
-    {"slug": "entity/zhang-san", "path": ["人物"]},
+    {"slug": "entity/legal-subjects", "path": ["法律"]},
     {"slug": "concept/spring-festival", "path": ["节日", "传统节日"]}
   ]
 }`
 
-// Wiki ingest prompt templates for LLM-powered wiki page generation.
-// These prompts are used by the wiki ingest pipeline to extract structured
-// knowledge from raw documents and build/update wiki pages.
+// Wiki 摄入提示词模板（中文版），用于 LLM 驱动的 Wiki 页面生成。
+// 这些提示词由 Wiki 摄入流水线使用，从原始文档中提取结构化知识并构建/更新 Wiki 页面。
 
-// WikiSummaryPrompt generates a summary page for a newly ingested document.
-//
-// Filename and title are intentionally NOT passed to the LLM: documents
-// uploaded to WeKnora often carry filenames that say nothing about the
-// content (e.g. scanned PDFs named after the scanner model "MX5280.pdf"),
-// and feeding such filenames to the model invites hallucinated summaries
-// when the actual extracted content is thin. The model must rely solely on
-// the document content provided below.
-const WikiSummaryPrompt = `You are a wiki editor. Given the following document content, create a structured wiki summary page in Markdown format.
+// WikiSummaryPrompt（文档摘要页生成提示词）
+// 作用：为新摄入的文档生成一个结构化的 Wiki 摘要页面（Markdown 格式），
+// 包含关键事实、Wiki 链接和要点总结。文件名和标题故意不传给 LLM，
+// 避免文件名误导模型产生幻觉摘要。
+// 注意：available_wiki_pages 中的 entity/ 类型是实体类（第二层本体，类别级），
+// 不是具体实例。
+const WikiSummaryPrompt = `你是一名Wiki编辑。根据下面的文档内容，创建一个结构化的Wiki摘要页面，使用Markdown格式。
 
 <document>
 <content>
@@ -70,24 +87,27 @@ const WikiSummaryPrompt = `You are a wiki editor. Given the following document c
 </available_wiki_pages>
 
 <instructions>
-1. The FIRST line of your output MUST be: SUMMARY: {one sentence, 15-40 words, describing what this document is about — for wiki index listing}
-2. After the SUMMARY line, write a comprehensive summary of the document in Markdown format.
-3. Include the key facts, arguments, and conclusions.
-4. Use proper heading hierarchy (## for sections, ### for subsections).
-5. **Wiki-link rule**: The available_wiki_pages list above maps slugs to display names and their aliases (format: "[[slug]] = display name (Aliases: a, b)"). Whenever you mention a name or alias that matches a listed entry, you MUST write it as [[slug|display name]] (e.g. [[entity/zhong-guo|中国]]), NOT as bold (**name**) or bare [[slug]]. Use the EXACT slugs provided — do NOT invent new slugs.
-6. **Image rule**: If the document contains <images> tags with <image> elements, you SHOULD include the relevant images in your summary using the Markdown syntax: ![caption](url). Place the images where they are contextually relevant to the text. The URL inside ![caption](url) is an opaque token; reproduce it EXACTLY and VERBATIM, do not alter, shorten, or normalize it.
-7. At the end, include a "## Key Takeaways" section with bullet points.
-8. Write in {{.Language}}.
-9. Keep the summary concise but thorough (500-1500 words depending on document length).
-10. **Empty content rule**: If the <content> block above is empty, contains only image references with no extracted text, or otherwise carries no substantive information, output exactly: "SUMMARY: No textual content was extractable from this document." followed by a brief note explaining that the document could not be summarised. Do NOT invent a topic, do NOT guess from any other clue.
+1. 输出的**第一行**必须是：SUMMARY: {一句话，15-40个词，描述这篇文档讲什么，用于Wiki索引列表}
+2. SUMMARY行之后，用Markdown格式写出文档的完整摘要。
+3. 包含关键事实、论点和结论。
+4. 使用正确的标题层级（## 表示章节，### 表示子章节）。
+5. **Wiki链接规则**：上面的 available_wiki_pages 列表把slug映射到显示名称和别名（格式："[[slug]] = 显示名称 (Aliases: a, b)"）。只要你提到匹配列表中的名称或别名，**必须**写成 [[slug|显示名称]]（例如 [[entity/insurance-products|保险产品类]]），不能写成加粗（**名称**）或者裸 [[slug]]。使用提供的精确slug — 不要发明新slug。
+   - 注意：entity/ 开头的slug代表**实体类（第二层本体）**，是类别/分类级别的页面（如"保险产品类"、"金融机构类"），不是具体单个事物。
+6. **图片规则**：如果文档包含 <images> 标签，里面有 <image> 元素，你应该把相关图片用Markdown语法放到内容合适的位置：![caption](url)。![caption](url) 里面的URL是不透明的令牌，你必须原封不动精确复制，不能修改、缩短或者标准化。
+7. 最后，包含一个"## 要点总结"章节，使用项目符号。
+8. 使用 {{.Language}} 书写。
+9. 保持摘要简洁但完整（根据文档长度，500-1500词）。
+10. **空内容规则**：如果上面的 <content> 块是空的，或者只包含图片引用没有提取出文本，或者没有任何实质性信息，输出精确为："SUMMARY: 无法从本文档提取文本内容。"，然后加一句简短说明解释为什么不能总结。不要编造主题，不要从其他线索猜测。
 </instructions>
 
-Output the SUMMARY line first, then the Markdown content. Do not include any other preamble.`
+先输出SUMMARY行，再输出Markdown内容，不要任何其他前言。`
 
-// WikiKnowledgeExtractPrompt extracts both entities and concepts in a single LLM call.
-// Returns a JSON object with "entities" and "concepts" arrays.
-// This replaces the former separate WikiEntityExtractPrompt and WikiConceptExtractPrompt.
-const WikiKnowledgeExtractPrompt = `You are a knowledge extraction system. Analyze the following document and extract all significant entities AND key concepts.
+// WikiKnowledgeExtractPrompt（知识抽取提示词）
+// 作用：单次 LLM 调用同时抽取文档中的实体类（第二层本体，业务本体的父类/分类）
+// 和概念，返回包含 "entities" 和 "concepts" 两个数组的 JSON 对象。
+// 每个条目包含名称、slug、别名、描述和详情。支持与上一次抽取结果保持 slug 稳定。
+// 注意：这里的 "entities" 指实体类（第二层本体，类别级），不是具体实例。
+const WikiKnowledgeExtractPrompt = `你是一个知识抽取系统。分析下面的文档，抽取出所有**实体类（第二层本体，业务本体的父类/分类）**和关键概念。
 
 <document>
 <content>
@@ -100,56 +120,92 @@ const WikiKnowledgeExtractPrompt = `You are a knowledge extraction system. Analy
 </previous_slugs>
 
 <instructions>
-Return a JSON object with two arrays: "entities" and "concepts".
-**IMPORTANT: Write ALL names, descriptions, and details in {{.Language}}**.
+返回一个JSON对象，包含 "entities" 和 "concepts" 两个数组。
+**重要：所有名称、描述、细节都必须用 {{.Language}} 书写**。
 
-If the <content> block above is empty, contains only image references with no extracted text, or otherwise carries no substantive information, return {"entities": [], "concepts": []}. Do NOT invent entities or concepts from any other source.
+如果 <content> 块是空的，或者只包含图片引用没有提取出文本，或者没有任何实质性信息，返回 {"entities": [], "concepts": []}。不要从其他任何来源编造实体类或概念。
 
-### Slug Continuity Rules
-If previous slugs are provided above, you MUST follow these rules:
-- If an entity or concept from the previous extraction still exists in the current document, **reuse its exact slug** from the previous list. Do NOT generate a new slug for the same thing.
-- If an entity or concept no longer appears in the document, **do NOT include it** in the output.
-- Only generate new slugs for entities/concepts that are genuinely new (not present in the previous list).
-- This ensures slug stability across document updates.
+### Slug 连续性规则
+如果上面提供了之前的slug列表，你必须遵守这些规则：
+- 如果一个实体类或概念在当前文档仍然存在，**必须复用之前列表中精确的slug**。不要为同一个东西生成新slug。
+- 如果一个实体类或概念不再出现在当前文档中，**不要**把它包含在输出中。
+- 只有真正新的（不在之前列表中）实体类/概念才生成新slug。
+- 这样保证跨文档更新slug稳定不变。
 
-### Entities (people, organizations, products, places, technologies, events, etc.)
-Each entity should have:
-- "name": The entity name in {{.Language}} (human-readable)
-- "slug": URL-friendly slug, format "entity/<lowercase-hyphenated-name>" (use romanized/pinyin form for non-Latin names). **Reuse previous slug if the entity was extracted before.**
-- "aliases": An array of strings representing names that refer to THE EXACT SAME entity. Only include: official abbreviations (e.g. "IBM" for "International Business Machines"), full/short name variants (e.g. "腾讯" for "腾讯控股有限公司"), translations (e.g. "Apple" for "苹果公司"), and well-known alternate names (e.g. "Alphabet" for "Google母公司"). Do NOT include parent categories, related products, generic terms, or broader concepts. Provide [] if none.
-- "description": **Index listing summary** — one sentence, 15-40 words, in {{.Language}}. Describes WHAT this entity IS and its role in the document. Must be self-contained (understandable without reading the full page). This will be displayed in the wiki index.
-- "details": A 2-5 sentence summary in {{.Language}} of key facts from the document. **Image rule**: If the document contains relevant <image> elements in an <images> tag, include them in the details using Markdown syntax: ![caption](url). The URL inside ![caption](url) is an opaque token; reproduce it EXACTLY and VERBATIM, do not alter, shorten, or normalize it.
+### 实体类 = 第二层本体（业务本体的父类/分类）
+**重要：这里的"实体"指实体类，是第二层本体——对业务本体的抽象分类，不是具体单个事物，也不是细粒度的业务本体本身。**
 
-Only include entities that are substantively discussed (mentioned at least twice or described in detail). Do NOT include generic terms.
+本体建模层级说明（供理解定位参考）：
+- **L1 顶层领域分类**：最宽泛的领域划分（如"金融"、"医疗"）
+- **L2 实体类（第二层本体，你要提取的目标）**：业务本体的父类/分类，如"保险产品类"、"金融机构类"
+- **L3 业务本体（第三层本体）**：具体的业务本体类，如"两全保险"、"保险公司" —— 属于本体建模，但你不需要提取到这一层
+- **实例**：实际的具体事物，如"小康安心享两全保险（分红型）"、"平安人寿" —— 不属于本体建模范畴，绝对不要提取
 
-### Concepts (topics, themes, methodologies, theories, etc.)
-Each concept should have:
-- "name": The concept name in {{.Language}} (human-readable)
-- "slug": URL-friendly slug, format "concept/<lowercase-hyphenated-name>" (use romanized/pinyin form for non-Latin names). **Reuse previous slug if the concept was extracted before.**
-- "aliases": An array of strings representing names that refer to THE EXACT SAME concept. Only include: official abbreviations (e.g. "RAG" for "Retrieval-Augmented Generation"), full/short name variants, and well-known synonyms used interchangeably in the field. Do NOT include sub-topics, related techniques, broader categories, or implementation details. Provide [] if none.
-- "description": **Index listing summary** — one sentence, 15-40 words, in {{.Language}}. Defines WHAT this concept IS. Must be self-contained (understandable without reading the full page). This will be displayed in the wiki index.
-- "details": A 2-5 sentence explanation in {{.Language}} as discussed in the document. **Image rule**: If the document contains relevant <image> elements in an <images> tag, include them in the details using Markdown syntax: ![caption](url). The URL inside ![caption](url) is an opaque token; reproduce it EXACTLY and VERBATIM, do not alter, shorten, or normalize it.
+实体类（第二层本体）的特征：
+- 是**类别/分类**，不是具体事物（例如"保险产品类"是类别，"小康安心享两全保险"是具体产品实例，不要提取）
+- 命名风格：多用"xx类"后缀，体现分类属性。**命名风格保持一致**，统一使用"xx类"的形式，避免混用"xx主体"、"xx对象"等不同后缀
+- 比业务本体（L3）高一个抽象层级，能够涵盖多个具体业务本体
+- 与业务本体之间是"is-a-kind-of"（是一种）的关系
 
-Only include concepts that are substantively discussed. Skip trivial or overly generic concepts.
+### 实体类提取的质量规则（非常重要）
 
-### Deduplication Rules
-- If something is a specific named thing (person, company, product, place), put it ONLY in "entities".
-- If something is an abstract idea, methodology, or theory, put it ONLY in "concepts".
-- Never duplicate items across the two arrays.
+**1. 粒度一致性：所有实体类必须在同一抽象层级上**
+- 不要出现"有的是大门类、有的是细分子类"混在一起的情况
+- 例如：有了"保险机构类"就不要再单独提取"保险中介机构类"——后者是前者的子类，应该作为子分类写在"保险机构类"的details里，而不是单独成为一个L2实体类
+- 正确的L2粒度：机构类、产品类、制度类、规范类、行为类、责任类、文书类（都是顶层分类维度）
+- 错误的L2粒度：中介机构类、基金类、待遇类（太细，是L3级别）
 
-### JSON Formatting Rules
-- **CRITICAL**: Do NOT use literal newline characters inside JSON string values. If you need a newline in a string, you MUST use the escaped sequence \n.
+**2. 避免机构类过度膨胀**
+- 机构相关的L2实体类控制在2-3个以内（如"机构主体类"或"监管机构类"+"经营机构类"）
+- 不要把每种具体机构类型都提成独立的L2实体类，细分类型写在对应实体类页面的下属分类里
+
+**3. 语义不重复**
+- 两个名称不同但语义高度重叠的类别，只保留一个更宽泛、更通用的
+- 例如"保险基金类"和"社会保险基金类"语义高度重叠，应合并为更宽泛的一个
+- 判断标准：如果两个类别可以用"就是一回事"来描述，就合并
+
+**4. 顶层领域分类视角**
+- L2实体类应该能够被归类到少数几个L1顶层领域下（如"法律"、"保险"、"社会保险"等）
+- 如果一个L2实体类找不到明确的L1归属，说明它可能粒度不对
+
+每个实体类应该包含：
+- "name": 实体类的 {{.Language}} 名称（人类可读），使用类别化命名，如"金融机构类"、"保险产品类"
+- "slug": URL友好的slug，格式 "entity/<小写连字符名称>"（非拉丁名称用拼音/罗马化）。**如果之前提取过，请复用之前的slug**。
+- "aliases": 字符串数组，表示指代同一个实体类的别名。只包含：官方缩写、全称/简称变体、领域内常用同义词。不包含子分类、更广的分类或者具体业务本体/实例。没有填 []。
+- "description": **索引列表摘要** — 一句话，15-40词，用 {{.Language}}。定义这个实体类是什么，涵盖哪些类型的业务本体。必须自包含（不读全文也能理解），会显示在Wiki索引中。
+- "details": 用 {{.Language}} 写2-5句话，描述这个实体类的涵盖范围、主要特征、下属分类方向、在文档中的角色。**图片规则**：如果文档中 <images> 标签有相关 <image> 元素，用Markdown语法：![caption](url) 包含进去。URL要原封不动精确复制，不能修改。
+
+只包含被实质性讨论（至少提到两次或者有专门描述）的实体类。不要包含太通用的分类（如"事物"、"对象"），也不要包含具体单个实例（如某家公司的名字、某个具体产品名、某个人名）。
+
+### 概念（主题、议题、方法论、理论等）
+每个概念应该包含：
+- "name": 概念的 {{.Language}} 名称（人类可读）
+- "slug": URL友好的slug，格式 "concept/<小写连字符名称>"（非拉丁名称用拼音/罗马化）。**如果之前提取过，请复用之前的slug**。
+- "aliases": 字符串数组，表示指代同一个概念的别名。只包含：官方缩写（例如 "RAG" 对应 "Retrieval-Augmented Generation"），全称/简称变体，领域内常用同义词。不包含子主题、相关技术、更广的分类或者实现细节。没有填 []。
+- "description": **索引列表摘要** — 一句话，15-40词，用 {{.Language}}。定义这个概念是什么。必须自包含。会显示在Wiki索引中。
+- "details": 用 {{.Language}} 写2-5句话，解释文档中讨论的这个概念。**图片规则**：如果文档中 <images> 标签有相关 <image> 元素，用Markdown语法包含进去，URL原封不动。
+
+只包含被实质性讨论的概念。跳过琐碎或者过于通用的概念。
+
+### 去重规则
+- 如果某个东西是类别/分类（业务本体的父类），只放在 "entities"。
+- 如果是抽象思想、方法论、理论、议题，只放在 "concepts"。
+- 永远不要在两个数组都重复同一个条目。
+- **绝对不要**提取具体单个实例（具体公司名、具体产品名、具体人名等）——那些属于实例层数据，不属于本体建模的范畴。第二层（实体类）和第三层（业务本体）都属于本体建模，但你当前只需提取到第二层实体类的粒度。
+
+### JSON 格式规则
+- **关键：** JSON字符串值内部不要使用字面换行。如果你需要换行，必须使用转义序列 \n。
 </instructions>
 
-Output ONLY valid JSON. Example:
+只输出合法JSON。示例：
 {
   "entities": [
     {
-      "name": "Acme Corp",
-      "slug": "entity/acme-corp",
-      "aliases": ["Acme", "Acme Corporation"],
-      "description": "A technology company specializing in AI solutions.",
-      "details": "Acme Corp was founded in 2020 and has grown to 500 employees. They focus on enterprise AI products and recently launched their flagship RAG platform."
+      "name": "金融机构类",
+      "slug": "entity/financial-institutions",
+      "aliases": ["金融机构", "金融机构主体"],
+      "description": "从事金融服务业务的机构实体类别，涵盖银行、保险、证券等多种类型。",
+      "details": "金融机构类包括银行类机构、保险类机构、证券类机构等多个子类。它们在金融体系中扮演资金中介、风险管理、支付结算等核心角色。不同类型的金融机构受到不同的监管框架约束。"
     }
   ],
   "concepts": [
@@ -157,19 +213,19 @@ Output ONLY valid JSON. Example:
       "name": "Retrieval-Augmented Generation",
       "slug": "concept/retrieval-augmented-generation",
       "aliases": ["RAG"],
-      "description": "A technique that combines information retrieval with language model generation.",
-      "details": "RAG works by first retrieving relevant documents from a knowledge base using vector similarity search, then feeding those documents as context to an LLM for answer generation."
+      "description": "一种结合信息检索和语言模型生成的技术。",
+      "details": "RAG 通过向量相似度搜索从知识库中检索相关文档，然后把这些文档作为上下文喂给LLM生成答案。"
     }
   ]
 }`
 
-// WikiCandidateSlugPrompt (Pass 0 of the chunk-cited pipeline) asks the LLM to
-// scan a document and output the SKELETON of all entities/concepts it contains:
-// name, slug, aliases, a short description, and a short details tiebreaker.
-// The heavy lifting — linking each slug to concrete supporting chunks — is
-// done in a second pass (see WikiChunkCitationPrompt). Because this prompt no
-// longer has to carry full facts per item, it stays cheap even for long docs.
-const WikiCandidateSlugPrompt = `You are a knowledge extraction system. Analyze the following document and list all significant entities AND key concepts as a lightweight candidate set. Another pass will later attach concrete supporting chunks to each item, so you do NOT need to write exhaustive per-item facts here.
+// WikiCandidateSlugPrompt（候选 slug 提取提示词 — chunk 引用流水线第 0 遍）
+// 作用：扫描整篇文档，输出所有实体类（第二层本体）/概念的轻量级骨架
+// （名称、slug、别名、简短描述、简短详情）。这是流水线的第一遍，
+// 只提取候选，不负责关联具体支撑 chunk（那是第二遍 WikiChunkCitationPrompt
+// 的工作），因此即使长文档成本也很低。支持 granularity（粒度）控制提取范围。
+// 注意：这里的 "entities" 指实体类（第二层本体，类别级），不是具体实例。
+const WikiCandidateSlugPrompt = `你是一个知识抽取系统。分析下面的文档，列出所有**实体类（第二层本体，业务本体的父类/分类）**和关键概念作为轻量级候选集合。后续步骤会给每个候选附加具体的支持chunk，所以你不需要在这里写详尽的每个条目事实，保持轻量就行。
 
 <document>
 <content>
@@ -182,59 +238,90 @@ const WikiCandidateSlugPrompt = `You are a knowledge extraction system. Analyze 
 </previous_slugs>
 
 <instructions>
-Return a JSON object with two arrays: "entities" and "concepts".
-**IMPORTANT: Write ALL names, descriptions, and details in {{.Language}}**.
+返回一个JSON对象，包含 "entities" 和 "concepts" 两个数组。
+**重要：所有名称、描述、细节都必须用 {{.Language}} 书写**。
 
-If the <content> block above is empty, contains only image references with no extracted text, or otherwise carries no substantive information, return {"entities": [], "concepts": []}. Do NOT invent entities or concepts from any other source.
+如果 <content> 块是空的，或者只包含图片引用没有提取出文本，或者没有任何实质性信息，返回 {"entities": [], "concepts": []}。不要从其他任何来源编造实体类或概念。
 
-### Extraction Scope (Granularity: {{.Granularity}})
+### 抽取范围（粒度：{{.Granularity}}）
 {{.GranularityGuidance}}
 
-### Slug Continuity Rules
-If previous slugs are provided above, you MUST follow these rules:
-- If an entity or concept from the previous extraction still exists in the current document, **reuse its exact slug** from the previous list. Do NOT generate a new slug for the same thing.
-- If an entity or concept no longer appears in the document, **do NOT include it** in the output.
-- Only generate new slugs for entities/concepts that are genuinely new (not present in the previous list).
-- This ensures slug stability across document updates.
+### Slug 连续性规则
+如果上面提供了之前的slug列表，你必须遵守这些规则：
+- 如果一个实体类或概念在当前文档仍然存在，**必须复用之前列表中精确的slug**。不要为同一个东西生成新slug。
+- 如果一个实体类或概念不再出现在当前文档中，**不要**把它包含在输出中。
+- 只有真正新的（不在之前列表中）实体类/概念才生成新slug。
+- 这样保证跨文档更新slug稳定不变。
 
-### Entities (people, organizations, products, places, technologies, events, etc.)
-Each entity should have:
-- "name": The entity name in {{.Language}} (human-readable).
-- "slug": URL-friendly slug, format "entity/<lowercase-hyphenated-name>" (use romanized/pinyin form for non-Latin names). **Reuse previous slug if the entity was extracted before.**
-- "aliases": An array of strings representing names that refer to THE EXACT SAME entity. Only include: official abbreviations (e.g. "IBM" for "International Business Machines"), full/short name variants (e.g. "腾讯" for "腾讯控股有限公司"), translations, and well-known alternate names. Do NOT include parent categories, related products, generic terms, or broader concepts. Provide [] if none.
-- "description": **Index listing summary** — one sentence, 15-40 words, in {{.Language}}. Describes WHAT this entity IS and its role in the document. Must be self-contained. This will be displayed in the wiki index.
-- "details": A short 1-3 sentence fallback summary in {{.Language}}. This is ONLY used when chunk-level citation fails downstream, so it does NOT need to be exhaustive. Keep it under 300 characters.
+### 实体类 = 第二层本体（业务本体的父类/分类）
+**重要：这里的"实体"指实体类，是第二层本体——对业务本体的抽象分类，不是具体单个事物，也不是细粒度的业务本体本身。**
 
-Apply the Extraction Scope rules above. Never promote trivially-mentioned names into entities.
+本体建模层级说明（供理解定位参考）：
+- **L1 顶层领域分类**：最宽泛的领域划分（如"金融"、"医疗"）
+- **L2 实体类（第二层本体，你要提取的目标）**：业务本体的父类/分类，如"保险产品类"、"金融机构类"
+- **L3 业务本体（第三层本体）**：具体的业务本体类，如"两全保险"、"保险公司" —— 属于本体建模，但你不需要提取到这一层
+- **实例**：实际的具体事物，如"小康安心享两全保险（分红型）"、"平安人寿" —— 不属于本体建模范畴，绝对不要提取
 
-### Concepts (topics, themes, methodologies, theories, etc.)
-Each concept should have:
-- "name": The concept name in {{.Language}} (human-readable).
-- "slug": URL-friendly slug, format "concept/<lowercase-hyphenated-name>" (use romanized/pinyin form for non-Latin names). **Reuse previous slug if the concept was extracted before.**
-- "aliases": An array of strings representing names that refer to THE EXACT SAME concept. Only include: official abbreviations (e.g. "RAG" for "Retrieval-Augmented Generation"), full/short name variants, and well-known synonyms used interchangeably in the field. Do NOT include sub-topics, related techniques, broader categories, or implementation details. Provide [] if none.
-- "description": **Index listing summary** — one sentence, 15-40 words, in {{.Language}}. Defines WHAT this concept IS. Must be self-contained.
-- "details": A short 1-3 sentence fallback summary in {{.Language}}. Keep it under 300 characters.
+实体类（第二层本体）的特征：
+- 是**类别/分类**，不是具体事物
+- 命名风格：统一使用"xx类"后缀，体现分类属性。保持命名风格一致，不要混用不同后缀
+- 比业务本体（L3）高一个抽象层级，能够涵盖多个具体业务本体
+- 与业务本体之间是"is-a-kind-of"（是一种）的关系
 
-Apply the Extraction Scope rules above. Skip concepts that are merely name-dropped without discussion.
+### 实体类提取的质量规则（非常重要）
 
-### Deduplication Rules
-- If something is a specific named thing (person, company, product, place), put it ONLY in "entities".
-- If something is an abstract idea, methodology, or theory, put it ONLY in "concepts".
-- Never duplicate items across the two arrays.
+**1. 粒度一致性：所有实体类必须在同一抽象层级上**
+- 不要出现"有的是大门类、有的是细分子类"混在一起的情况
+- 例如：有了"保险机构类"就不要再单独提取"保险中介机构类"——后者是前者的子类，应该作为子分类写在details里，而不是单独成为一个L2实体类
+- 正确的L2粒度：机构类、产品类、制度类、规范类、行为类、责任类、文书类（都是顶层分类维度）
+- 错误的L2粒度：中介机构类、基金类、待遇类（太细，是L3级别）
 
-### JSON Formatting Rules
-- **CRITICAL**: Do NOT use literal newline characters inside JSON string values. If you need a newline in a string, you MUST use the escaped sequence \n.
+**2. 避免机构类过度膨胀**
+- 机构相关的L2实体类控制在2-3个以内
+- 不要把每种具体机构类型都提成独立的L2实体类，细分类型写在对应实体类页面的下属分类里
+
+**3. 语义不重复**
+- 两个名称不同但语义高度重叠的类别，只保留一个更宽泛、更通用的
+- 判断标准：如果两个类别可以用"就是一回事"来描述，就合并
+
+每个实体类应该包含：
+- "name": 实体类的 {{.Language}} 名称（人类可读），使用类别化命名。
+- "slug": URL友好的slug，格式 "entity/<小写连字符名称>"（非拉丁名称用拼音/罗马化）。**如果之前提取过，请复用之前的slug**。
+- "aliases": 字符串数组，表示指代同一个实体类的别名。只包含：官方缩写，全称/简称变体，领域内常用同义词。不包含子分类、更广的分类或者具体业务本体/实例。没有填 []。
+- "description": **索引列表摘要** — 一句话，15-40词，用 {{.Language}}。定义这个实体类是什么，涵盖哪些类型的业务本体。必须自包含。会显示在Wiki索引中。
+- "details": 简短的1-3句话后备摘要，用 {{.Language}}。描述这个实体类的涵盖范围和主要特征。这只是当后续chunk级引用失败时用的，所以不需要详尽，保持在300字符以内。
+
+按照上面的抽取范围规则和质量规则应用。永远不要把顺便提到的具体事物名称提升为实体类。不要提取具体单个实例（具体公司名、具体产品名、具体人名等）。
+
+### 概念（主题、议题、方法论、理论等）
+每个概念应该包含：
+- "name": 概念的 {{.Language}} 名称（人类可读）。
+- "slug": URL友好的slug，格式 "concept/<小写连字符名称>"（非拉丁名称用拼音/罗马化）。**如果之前提取过，请复用之前的slug**。
+- "aliases": 字符串数组，表示指代同一个概念的别名。只包含：官方缩写，全称/简称变体，领域内常用同义词。不包含子主题、相关技术、更广的分类或者实现细节。没有填 []。
+- "description": **索引列表摘要** — 一句话，15-40词，用 {{.Language}}。定义这个概念是什么。必须自包含。会显示在Wiki索引中。
+- "details": 简短的1-3句话后备摘要，用 {{.Language}}。保持在300字符以内。
+
+按照上面的抽取范围规则应用。跳过只是被提到但没有讨论的概念。
+
+### 去重规则
+- 如果某个东西是类别/分类（业务本体的父类），只放在 "entities"。
+- 如果是抽象思想、方法论、理论、议题，只放在 "concepts"。
+- 永远不要在两个数组都重复同一个条目。
+- **绝对不要**提取具体单个实例（具体公司名、具体产品名、具体人名等）——那些属于实例层数据，不属于本体建模的范畴。第二层（实体类）和第三层（业务本体）都属于本体建模，但你当前只需提取到第二层实体类的粒度。
+
+### JSON 格式规则
+- **关键：** JSON字符串值内部不要使用字面换行。如果你需要换行，必须使用转义序列 \n。
 </instructions>
 
-Output ONLY valid JSON. Example:
+只输出合法JSON。示例：
 {
   "entities": [
     {
-      "name": "Acme Corp",
-      "slug": "entity/acme-corp",
-      "aliases": ["Acme", "Acme Corporation"],
-      "description": "A technology company specializing in AI solutions.",
-      "details": "Founded in 2020, focuses on enterprise AI products."
+      "name": "金融机构类",
+      "slug": "entity/financial-institutions",
+      "aliases": ["金融机构", "金融机构主体"],
+      "description": "从事金融服务业务的机构实体类别，涵盖银行、保险、证券等多种类型。",
+      "details": "涵盖银行、保险、证券等多个子类，扮演资金中介、风险管理等核心角色。"
     }
   ],
   "concepts": [
@@ -242,49 +329,55 @@ Output ONLY valid JSON. Example:
       "name": "Retrieval-Augmented Generation",
       "slug": "concept/retrieval-augmented-generation",
       "aliases": ["RAG"],
-      "description": "A technique that combines information retrieval with language model generation.",
-      "details": "Retrieves documents, then feeds them as context to an LLM."
+      "description": "一种结合信息检索和语言模型生成的技术。",
+      "details": "检索文档，然后作为上下文喂给LLM。"
     }
   ]
 }`
 
-// WikiChunkCitationPrompt (Pass 1..N of the chunk-cited pipeline) asks the LLM
-// to read a batch of chunks and, for each candidate entity/concept, list the
-// chunk IDs that substantively discuss it. This keeps per-slug "facts" in
-// their verbatim form (the chunk text) instead of asking the LLM to paraphrase.
-// Block order matters for provider prefix caching: the static rules,
-// output schema and the per-document-stable <candidate_slugs> are placed
-// BEFORE the per-batch <chunks> block. Within one document only ChunksXML
-// changes between batches, so every batch after the first shares the long
-// [rules | candidate_slugs] prefix and avoids re-billing the static rules.
-const WikiChunkCitationPrompt = `You are a precise citation system. Your job is to scan a batch of document chunks and decide, for each candidate entity/concept below, which chunks substantively discuss it.
+// WikiChunkCitationPrompt（chunk 引用分配提示词 — chunk 引用流水线第 1..N 遍）
+// 作用：读取一批 chunk，为每个候选实体类（第二层本体）/概念
+// 列出实质性讨论了它的 chunk ID。每个 slug 的"事实"以原文 chunk 形式保存，
+// 而不是让 LLM 转述。
+// 注意块顺序是为了 provider 前缀缓存优化：静态规则、输出结构和
+// 文档内稳定的 <candidate_slugs> 放在每批都变的 <chunks> 块前面，
+// 这样同一文档除第一批外都能共享 [规则 + 候选列表] 前缀，节省 token。
+// 注意：这里的 "entity" 指实体类（第二层本体，类别级），不是具体实例。
+const WikiChunkCitationPrompt = `你是一个精确的引用系统。你的工作是扫描一批文档chunk，对于每个候选实体类（第二层本体）/概念，决定哪些chunk实质性讨论了它。
 
 <instructions>
-**IMPORTANT: Write ALL names, descriptions, and details in {{.Language}}**.
+**重要：所有名称、描述、细节都必须用 {{.Language}} 书写**。
 
+### 主要任务
 ### Primary task
-For each candidate slug (listed in <candidate_slugs> below), select the chunk IDs (from the <chunks> block below) that **substantively discuss** that entity/concept. "Substantively" means the chunk states at least one concrete fact, attribute, step, date, number, relationship, or other useful piece of information about the candidate — not a passing mention.
+对于下面 <candidate_slugs> 列表中的每个候选实体类/概念，选出这个批次中**实质性讨论**它的chunk ID。"实质性"意思是chunk至少陈述了关于这个类别（或概念）的定义、特征、分类方式、涵盖范围、适用条件或者其他有用信息，而不是顺便提到它的名字。
 
-- Only cite chunks that appear in the <chunks> block below.
-- Use the "id" attribute of each <c> element verbatim (e.g. "c003").
-- If a candidate is not meaningfully discussed in ANY chunk in this batch, omit it from the output (do not include empty arrays).
-- A chunk CAN be cited by multiple candidates if it genuinely discusses multiple of them.
-- If a chunk is overly long or mixes unrelated topics, still cite it for every candidate it discusses.
+- 只引用 <chunks> 块中的chunk。
+- 逐字使用每个<c>元素的"id"属性（例如 "c003"）。
+- 如果一个候选在这个批次中任何chunk都没有被实质性讨论，从输出中省略它（不要包含空数组）。
+- 一个chunk可以被多个候选引用，如果它确实讨论了多个候选。
+- 如果一个chunk太长混合了不相关主题，仍然要给每个讨论到的候选引用它。
 
-### Secondary task: new slugs
-If this batch reveals a significant entity/concept that is **NOT** in <candidate_slugs>, you may add it under "new_slugs" so it gets incorporated. Only add genuinely new, substantively-discussed items. Do NOT rediscover items already listed in <candidate_slugs> — reuse their slug if they are already candidates.
+### 关于"实体类"的说明
+候选列表中的 "entity" 类型指**实体类（第二层本体）**，是业务本体的父类/分类（如"保险产品类"、"金融机构类"），不是具体单个事物。判断一个chunk是否"实质性讨论"了某个实体类，要看它是否讨论了这个**类别的定义、特征、范围、分类方式**等，而不是讨论了该类别下的某个具体实例。
 
-Each new slug must include:
-- "type": "entity" or "concept"
-- "name", "slug", "aliases", "description", "details" (same semantics as the candidate list)
-- "source_chunks": list of chunk IDs in the current batch that discuss it
+### 次要任务：新slug
+如果这个批次发现了一个重要的实体类/概念，**不在** <candidate_slugs> 中，你可以把它加到 "new_slugs" 下面让它被收录。只加真正新的、被实质性讨论的类别。不要重新发现已经在候选列表中的条目 — 如果它已经是候选，复用它的slug。
 
+**重要：** 新发现的实体类必须是第二层本体级别的分类（类别/分类），不是具体单个实例（具体公司名、具体产品名、具体人名等都属于实例层，不要提取）。
+
+每个新slug必须包含：
+- "type": "entity" 或者 "concept"（"entity" 表示实体类 = 第二层本体）
+- "name", "slug", "aliases", "description", "details"（和上面候选列表语义一样）
+- "source_chunks": 当前批次讨论它的chunk ID列表
+
+### JSON 格式规则
 ### JSON Formatting Rules
-- **CRITICAL**: Do NOT use literal newline characters inside JSON string values. If needed, use \n.
-- Output ONLY valid JSON, no preamble.
+- **关键：** JSON字符串值内部不要使用字面换行。如果需要，用 \n。
+- 只输出合法JSON，不要前言。
 </instructions>
 
-Output format:
+输出格式：
 {
   "citations": {
     "entity/xxx": ["c001", "c003"],
@@ -293,17 +386,17 @@ Output format:
   "new_slugs": [
     {
       "type": "entity",
-      "name": "Example",
-      "slug": "entity/example",
-      "aliases": [],
-      "description": "...",
-      "details": "...",
+      "name": "金融机构类",
+      "slug": "entity/financial-institutions",
+      "aliases": ["金融机构"],
+      "description": "从事金融服务业务的机构实体类别。",
+      "details": "涵盖银行、保险、证券等多个子类。",
       "source_chunks": ["c005"]
     }
   ]
 }
 
-If nothing in this batch is cite-worthy, return: {"citations": {}, "new_slugs": []}
+如果这个批次没有任何值得引用的内容，返回：{"citations": {}, "new_slugs": []}
 
 <candidate_slugs>
 {{.CandidateSlugs}}
@@ -313,35 +406,45 @@ If nothing in this batch is cite-worthy, return: {"citations": {}, "new_slugs": 
 {{.ChunksXML}}
 </chunks>
 
-Now apply the instructions above to the chunks and output ONLY the JSON.`
+现在按照上面的指令应用到chunks，只输出JSON。`
 
-// WikiPageModifySystemPrompt contains only rules shared by every page update.
-// Keeping page identity and source data out of this message gives providers a
-// long byte-stable prefix to cache across a reduce batch.
-const WikiPageModifySystemPrompt = `You are a wiki editor tasked with updating an existing wiki page. You must process NEW information to add and/or deleted documents whose exclusive contributions must be removed.
+// WikiPageModifySystemPrompt（Wiki 页面更新系统提示词）
+// 作用：只包含所有页面更新共享的规则（来源接地、合并规则、编辑输出规则等）。
+// 把页面身份和源数据放在 user message 里，让 system message 形成长字节稳定前缀，
+// 便于 provider 在 reduce 批次中做前缀缓存，降低成本。
+// 注意：实体类页面 = 第二层本体（业务本体的父类/分类），不是具体实例页面。
+const WikiPageModifySystemPrompt = `你是一名Wiki编辑，负责更新已有Wiki页面。你必须处理新信息，添加新文档贡献，删除已经移除文档带来的贡献。
 
-### SOURCE GROUNDING & MERGE RULES (CRITICAL):
-1. **No Inline Chunk IDs:** Chunk handles such as [c003] are internal processing metadata. NEVER output them in the page body or summary, and remove any legacy inline chunk handles from existing content while editing. Source associations are stored separately by the system.
-2. **Mandatory Grounding:** Every newly added factual claim, entity, or numerical value MUST be directly supported by the provided new source chunks, but the final prose must remain clean Markdown without inline chunk IDs.
-3. **No Hallucination:** Do not invent, synthesize, or infer any information that is not explicitly present in the provided source chunks. If the new chunks clearly and directly supersede or contradict existing content, update the main text to reflect the newer supported information AND add a brief "Contradictions / Updates" section summarizing the change. If the conflict is ambiguous, unresolved, or not directly supported by the provided chunks, do not overwrite the existing content; instead, add only a "Contradictions / Updates" section describing the conflict.
-4. The shared source-context block describes what each source document is about and what kind of document it is. Use it only to calibrate scope, attribution, and tone. Never copy source-context wording into the page as factual evidence.
-5. Stable system-owned output, grounding, safety, and factuality rules override any business instructions.
+### 页面类型说明
+Wiki页面有不同类型，编辑时注意内容侧重：
+- **实体类页面（entity 类型）**：第二层本体页面，介绍一个类别/分类（如"保险产品类"、"金融机构类"）。内容应围绕**类别定义、涵盖范围、主要特征、下属分类方向、与其他类别的关系**展开，不要聚焦在某个具体实例上。
+- **概念页面（concept 类型）**：介绍一个抽象思想、方法论、理论、议题。
+- **摘要页面（summary 类型）**：单篇文档的摘要。
 
-### EDITING AND OUTPUT RULES:
-1. You are a COMPILER, not a creative writer. Stay close to the verbatim source wording. You may lightly reorder, deduplicate, and join related sentences, but must not rephrase for style, expand short statements, or invent transitions.
-2. Do not over-structure. Introduce a section heading only if the source or existing page uses it. Prefer a single top-level heading, short paragraphs, and flat factual lists over an invented hierarchy.
-3. Do not add rhetorical filler such as "aims to provide", "designed to", "旨在帮助", "致力于", or "具有重要意义" unless it appears verbatim in an evidentiary source chunk.
-4. Keep self-reported claims scoped and attributed. Do not elevate a resume, product page, announcement, or first-person statement into an industry-wide fact.
-5. Preserve existing information that remains valid and on-topic. Maintain the existing page's structure and formatting style where possible.
-6. Keep a [[slug|name]] link only when its slug is present in the supplied valid-link list. Never invent a slug and never link a page to itself.
-7. Images may be included only from supplied new information. Treat each Markdown image URL as an opaque token and reproduce it exactly without altering, shortening, or normalizing it.
-8. The first output line must be "SUMMARY: {one sentence, 15-40 words}", followed immediately by clean Markdown page content.
+### 来源接地 & 合并规则（关键）：
+1. **不要行内chunk ID：** [c003] 这种是内部处理元数据。NEVER output them in the page body or summary，编辑的时候从已有内容移除任何遗留的行内chunk句柄。Source associations are stored separately by the system。最终 prose 必须保持干净Markdown，不能有行内chunk ID（clean Markdown without inline chunk IDs）。
+2. **强制接地：** 每个新添加的事实主张、实体、数值都必须直接被提供的新来源chunk支持，但最终 prose 必须保持干净Markdown，不能有行内chunk ID。
+3. **不要幻觉：** 不要发明、合成、推断没有明确出现在提供的来源chunk中的信息。如果新块清楚直接取代或者矛盾了已有内容，更新正文反映新信息，并且加一个简短的"矛盾/更新"章节总结变化。如果冲突模糊、未解决，或者不被提供的chunk直接支持，不要覆盖已有内容，只加一个"矛盾/更新"章节描述冲突就行。
+4. 共享来源上下文块描述每个来源文档是什么，是什么类型的文档。只用它来校准范围、归属和语气。永远不要把来源上下文的措辞复制到页面作为事实证据。
+5. 稳定系统输出、接地、安全和事实规则优先于业务指令。
 
-Output the SUMMARY line first, followed by the updated Markdown content, with no other preamble.`
+### 编辑和输出规则：
+1. 你是一个**编译器**，不是创意作家。贴近逐字来源措辞。你可以轻微重新排序、去重、连接相关句子，但不能为了风格重新措辞、扩展短陈述，或者发明过渡。
+2. 不要过度结构化。只有来源或者已有页面使用了标题，才引入章节标题。偏好单个顶级标题、短段落、扁平事实列表，不要发明层级。
+3. 不要加修辞填充物，比如"旨在提供"、"设计用于"、"旨在帮助"、"致力于"，除非这些措辞逐字出现在证据来源chunk中。
+4. 保持自我报告的主张有范围和归属。不要把简历、产品页、公告的第一人称陈述提升为行业范围事实。
+5. 保留仍然有效且仍然相关的已有信息。尽可能保持已有页面的结构和格式风格。
+6. 保留 [[slug|name]] wiki链接引用只有slug出现在上面提供的有效链接列表中。移除任何slug不在列表中的 [[slug|name]]。不要发明新wiki slug。页面自己的slug ({{.PageSlug}}) 绝对不能在它自己内容里面作为 [[...]] 链接出现。
+7. 只有从提供的新信息中可以包含图片。把每个Markdown图片URL当作不透明令牌，原封不动复制，不要修改。
+8. 输出第一行必须是 "SUMMARY: {一句话，15-40词}"，然后紧跟干净的Markdown页面内容。
 
-// WikiPageModifyUserPrompt contains the per-batch and per-page data. The document-
-// level source context deliberately comes first: all pages generated from one
-// source then share the longest possible prefix before page metadata diverges.
+输出先SUMMARY行，然后更新后的Markdown内容，不要任何其他前言。`
+
+// WikiPageModifyUserPrompt（Wiki 页面更新用户提示词）
+// 作用：包含每批次、每页面的具体数据（页面元数据、已有内容、新信息、
+// 已删除文档、有效 Wiki 链接等）。文档级共享来源上下文放在最前面，
+// 这样同一来源生成的所有页面在页面元数据分化前共享最长前缀，便于缓存。
+// 注意：entity 类型页面是第二层本体（实体类）页面，不是具体实例页面。
 const WikiPageModifyUserPrompt = `{{if .HasAdditions}}<shared_source_contexts>
 {{.SharedSourceContexts}}</shared_source_contexts>
 {{end}}
@@ -353,7 +456,11 @@ const WikiPageModifyUserPrompt = `{{if .HasAdditions}}<shared_source_contexts>
   <aliases>{{.PageAliases}}</aliases>{{end}}
 </page_metadata>
 
-This wiki page is specifically about **{{.PageTitle}}** (a {{.PageType}}). Every statement on the page MUST be directly about this exact {{.PageType}} — not about related, adjacent, or similarly-named things.
+这个Wiki页面专门关于 **{{.PageTitle}}**（一个 {{.PageType}}）。页面上每个陈述都必须**精确**关于这个 {{.PageType}} — 不是相关的、相邻的或者同名的其他东西。
+
+{{- if eq .PageType "entity"}}
+**注意：这是一个实体类页面（第二层本体页面）**，介绍的是一个类别/分类，不是某个具体实例。内容应该围绕该类别的定义、涵盖范围、主要特征、下属分类方向等展开，不要把页面写成某个具体事物的介绍。
+{{- end}}
 
 <existing_page_content>
 {{.ExistingContent}}
@@ -364,7 +471,7 @@ This wiki page is specifically about **{{.PageTitle}}** (a {{.PageType}}). Every
 {{.NewContent}}
 </new_information>
 
-The <new_information> block above is assembled from VERBATIM source chunks already cited as directly supporting this page. The preceding <shared_source_contexts> block is framing only, not evidence.
+上面 <new_information> 块是从直接支持这个页面的来源chunk逐字拼接来的。前面的 <shared_source_contexts> 只是框架，不是证据。
 {{end}}
 
 {{if .HasRetractions}}
@@ -382,44 +489,51 @@ The <new_information> block above is assembled from VERBATIM source chunks alrea
 </valid_wiki_links>
 
 <instructions>
-1. The FIRST line of your output MUST be: SUMMARY: {one sentence, 15-40 words, describing what this page is about after the update — for wiki index listing}
+1. 输出的**第一行**必须是：SUMMARY: {一句话，15-40词，描述更新后这个页面讲什么 — 用于Wiki索引列表}
 {{if .HasRetractions}}
-2. REMOVE facts/claims that were ONLY sourced from the <deleted_documents> and are NOT present in any <remaining_source_documents> or <new_information>.
+2. **移除**那些只来自<deleted_documents>，并且不在<remaining_source_documents>或<new_information>中的事实/主张。
 {{end}}
 {{if .HasAdditions}}
-3. ADD and MERGE the facts from <new_information> into the page. You are a COMPILER, not a writer:
-   - **CRITICAL CONFLICT CHECK**: First verify that the <new_information> is actually about **{{.PageTitle}}** (as declared in <page_metadata>). If a piece of new info clearly belongs to a DIFFERENT but related thing (e.g., this page is about "Hunyuan Model" but the new info is about "Qwen3"; or this page is about "居民身份证" but the new info is about "工作居住证"), you MUST REJECT that part of the new information and DO NOT add it.
-   - If it is genuinely about {{.PageTitle}} and contradicts old content, prefer the newer information.
+3. **添加合并** <new_information> 中的事实到页面中。你是一个编译器，不是作者：
+   - **关键冲突检查**：首先验证 <new_information> 真的关于 **{{.PageTitle}}**（正如 <page_metadata> 声明的）。如果一条新信息明显属于不同但相关的东西（例如：这个页面关于"保险产品类"，新信息关于"银行产品类"；或者这个页面关于"居民身份证"，新信息关于"工作居住证"），你**必须拒绝**这部分新信息，不要添加。
+   {{- if eq .PageType "entity"}}
+   - **实体类页面专属**：只添加关于这个**类别本身**的定义、特征、范围、分类方式等信息。如果新信息只是在讨论该类别下的某个具体实例（如某个具体公司、某个具体产品），不要把那个实例的具体数据加到类别页面上。
+   {{- end}}
+   - 如果它真的关于 {{.PageTitle}} 并且矛盾了旧内容，优先使用新信息。
 {{end}}
-4. Preserve existing information that is still valid and still about {{.PageTitle}}.
-5. Keep [[slug|name]] wiki-link references ONLY if the slug appears in the <valid_wiki_links> list above. Remove any [[slug|name]] whose slug is NOT in that list. Do NOT invent new wiki-link slugs. The page's own slug ({{.PageSlug}}) MUST NOT appear as a [[...]] link inside its own content.
-6. Maintain the existing page structure and formatting style. Use "# {{.PageTitle}}" as the top-level heading if the page does not already have one. Do NOT introduce new heading levels beyond what the source or existing page justifies.
+4. 保留仍然有效仍然相关的已有信息。
+5. 保留 [[slug|name]] wiki链接引用只有slug出现在 <valid_wiki_links> 列表中。移除任何slug不在列表中的 [[slug|name]]。不要发明新wiki slug。
+6. 尽可能保持已有页面的结构和格式风格。如果页面还没有顶级标题，用 "# {{.PageTitle}}" 作为顶级标题。不要引入源或已有页面不需要的新标题层级。
 {{if .HasRetractions}}
-7. If after removing deleted content the page becomes nearly empty and there is no new information to add, output just: "SUMMARY: (empty page)\n# {{.PageTitle}}\n\n*This page's primary source document was removed.*"
+7. 删除内容后如果页面几乎空了并且没有新信息要加，输出："SUMMARY: (空页面)\n# {{.PageTitle}}\n\n*这个页面的主要来源文档已被删除。*"
 {{end}}
-8. Write in {{.Language}}.
+8. 使用 {{.Language}} 书写。
 </instructions>
 
-Output the SUMMARY line first, then the updated Markdown content. Do not include any other preamble.`
+先输出SUMMARY行，再输出更新后的Markdown内容，不要任何其他前言。`
 
-// WikiIndexIntroPrompt generates the introduction for a NEW index page (first time only).
-const WikiIndexIntroPrompt = `You are a wiki editor. Write a brief introduction for a wiki knowledge base index page.
+// WikiIndexIntroPrompt（首次生成索引介绍提示词）
+// 作用：为新建的 Wiki 索引页生成介绍部分（仅首次创建时调用一次）。
+// 根据文档摘要列表写一个标题和 2-3 句话的简介，反映知识库的领域范围。
+const WikiIndexIntroPrompt = `你是一名Wiki编辑。给Wiki知识库索引页写一段简短介绍。
 
 <document_summaries>
 {{.DocumentSummaries}}
 </document_summaries>
 
 <instructions>
-1. Write a title line starting with "# " that reflects the knowledge domain.
-2. Follow with 2-3 sentences describing what this wiki covers, based on the document summaries above.
-3. Keep it concise — this is just the header section, the directory listing will be added separately below.
-4. Write in {{.Language}}.
+1. 写一个标题行，以 "# " 开头，反映知识领域。
+2. 接着用2-3句话描述这个Wiki覆盖什么内容，基于上面的文档摘要。
+3. 保持简洁 — 这只是头部章节，目录列表会单独加在下面。
+4. 使用 {{.Language}} 书写。
 </instructions>
 
-Output ONLY the title and introduction paragraph. Do NOT generate any directory listings or page links.`
+只输出标题和介绍段落，不要生成任何目录列表或页面链接。`
 
-// WikiIndexIntroUpdatePrompt incrementally updates an existing index introduction.
-const WikiIndexIntroUpdatePrompt = `You are a wiki editor. Update the introduction section of a wiki index page to reflect recent changes.
+// WikiIndexIntroUpdatePrompt（增量更新索引介绍提示词）
+// 作用：当 Wiki 内容发生变化（新增/删除文档）时，增量更新已有索引页的
+// 介绍部分。保持原有语气、风格和标题格式，只反映实际变化。
+const WikiIndexIntroUpdatePrompt = `你是一名Wiki编辑。更新Wiki索引页的介绍部分，反映最近的变化。
 
 <current_introduction>
 {{.ExistingIntro}}
@@ -434,125 +548,213 @@ const WikiIndexIntroUpdatePrompt = `You are a wiki editor. Update the introducti
 </document_summaries>
 
 <instructions>
-1. Update the introduction to accurately reflect the current state of the wiki.
-2. If documents were added, mention the new topics if they significantly change the wiki's scope.
-3. If documents were removed, remove references to those topics if they no longer apply.
-4. Keep the same tone, style, and title format as the existing introduction.
-5. Keep it concise — 1 title line + 2-3 sentences.
-6. Write in {{.Language}}.
+1. 更新介绍准确反映Wiki当前状态。
+2. 如果有文档新增，如果它们显著改变了Wiki范围，提及新主题。
+3. 如果有文档删除，如果那些主题不再适用，移除对它们的引用。
+4. 保持和已有介绍相同的语气、风格、标题格式。
+5. 保持简洁 — 1个标题行 + 2-3句话。
+6. 使用 {{.Language}} 书写。
 </instructions>
 
-Output ONLY the updated title and introduction paragraph. Do NOT generate any directory listings or page links.`
+只输出更新后的标题和介绍段落，不要生成任何目录列表或页面链接。`
 
-// WikiDeduplicationPrompt asks the LLM to identify duplicate entities/concepts
-// between newly extracted items and existing wiki pages.
-const WikiDeduplicationPrompt = `You are a strict deduplication system. You are given a list of newly extracted items. Each item carries its OWN short list of existing wiki pages that are surface-similar to it (its <candidates>). For each item, decide whether it refers to the **exact same** real-world entity or concept as ONE of its own candidates.
+// WikiDeduplicationPrompt（去重判断提示词）
+// 作用：判断新抽取的条目和已有 Wiki 页面之间是否存在重复。
+// 每个条目带着自己的候选相似页面列表，由 LLM 判断是否指同一个语义类别。
+// 只有名称变体（缩写、翻译、同一分类的不同说法）才算重复，
+// 相关但不同的类别绝对不能合并。合并标准非常严格，存疑则不合并。
+// 注意：这里的 "entity" 指实体类（第二层本体，类别级），不是具体实例。
+const WikiDeduplicationPrompt = `你是一个严格的去重系统。给你一个新抽取条目的列表，每个条目带着它自己的表面相似已有Wiki页面短列表（它的<candidates>）。对于每个条目，决定它是否和某个候选指的是**完全同一个**语义类别或概念。
 
 <items>
 {{.Candidates}}
 </items>
 
 <instructions>
-### How to read the input
-Each <item> is a newly extracted entity/concept. The <candidates> nested inside it are the ONLY existing pages you may merge that item into — they were pre-selected as similar to that specific item. A page listed under one item tells you NOTHING about any other item.
+### 如何读输入
+每个<item>是一个新抽取的实体类/概念。<candidates>嵌套在它里面，是这个条目唯一可以选择合并的已有页面 — 预先选择出来和这个特定条目相似。一个条目下面的候选和其他条目无关。
 
-### Hard constraints — a merge is only valid when ALL hold:
-- The target slug is one of the candidate <page> slugs listed **inside that same item**. NEVER merge into a page listed under a different item, and NEVER invent a slug.
-- The types are compatible: entities merge with entities, concepts merge with concepts. **Never merge an entity into a concept or vice versa.**
+### 关于"实体类"的说明
+实体类 = 第二层本体，是业务本体的父类/分类（如"保险产品类"、"金融机构类"），是类别级别的知识节点，不是具体单个事物。去重判断要基于"两个名称是否指的是同一个语义分类"来判断。
 
-### Merge criteria — ALL must be true:
-1. The new item and the candidate page refer to the **same real-world thing** (same person, same organization, same specific concept).
-2. The match is a **name variation**: abbreviation ↔ full name, translation, or minor spelling difference.
+### 硬约束 — 只有满足所有条件才能合并：
+- 目标slug必须是同一个条目<item>内部候选page slug中的一个。**永远不要**合并到不同条目下列出的页面，也永远不要发明slug。
+- 类型必须兼容：实体类只能合并到实体类，概念只能合并到概念。**永远不要**把实体类合并到概念，反过来也一样。
 
-### Examples of CORRECT merges:
-- "Acme Corp" → "Acme Corporation" (same company, abbreviation)
-- "RAG" → "Retrieval-Augmented Generation" (same concept, acronym)
-- "苹果公司" → "Apple Inc." (same entity, translation)
+### 合并标准 — 满足以下任一情况即可合并：
+1. **同一个语义类别**（同一个分类、同一种业务本体父类、同一个抽象概念）。
+2. **名称变体**：缩写 ↔ 全称，翻译，同一分类的不同说法，或者微小命名差异。
+3. **语义高度重叠**：两个类别描述的本质是同一类事物，只是命名角度或涵盖范围略有差异（例如"保险基金类"和"社会保险基金类"都指保险领域的专项资金类别，应合并为更宽泛的那个）。
+4. **包含关系中偏窄的类别样本量不足**：如果一个候选是另一个的子类，但该子类在整个知识库中只有1-2个相关页面、不足以独立支撑一个L2实体类，应合并到更宽泛的父类中。这条仅适用于L2实体类粒度一致性判断，不适用于概念。
 
-### Examples of INCORRECT merges — do NOT merge these:
-- "Hunyuan Model" → "Qwen Model" (competing products in the same category are DIFFERENT entities, do not merge them)
-- "iPhone 15" → "Huawei Mate 60" (different specific instances in the same category)
-- "GPT-4" → "GPT-3.5" (different versions of a product are distinct entities)
-- "AI Safety" → "Content Review Mechanism" (related topics, but different concepts)
-- "Athlete Registration" → "Degree Verification" (both involve verification, but completely different domains)
-- "Competition Categories" → "Age Groups" (age groups are one aspect of categories, not the same concept)
-- "Performance Standard" → "Competition Rounds" (both relate to competitions, but are different concepts)
-- "Machine Learning" → "Neural Networks" (neural networks are a subset of ML, not the same concept)
-- "居民身份证 / Resident ID Card" → "工作居住证 / Work Residence Permit" (both are government-issued documents but completely different credentials)
-- "驾驶证 / Driver's License" → "行驶证 / Vehicle Registration" (both are car-related certificates but different documents)
-- "学位证 / Degree Certificate" → "毕业证 / Graduation Certificate" (both educational documents but distinct)
+### 正确合并例子（实体类）：
+- "金融机构类" → "金融机构主体类"（同一个类别，不同后缀说法）
+- "保险产品类" → "保险产品分类"（同一个分类，不同表述方式）
+- "监管文件类" → "监管文档类"（同一个类别，"文件"和"文档"是同义词）
+- "保险基金类" → "社会保险基金类"（语义高度重叠，都指保险领域专项资金类别，合并为更宽泛的）
+- "保险中介机构类" → "保险机构类"（前者是后者子类，作为独立L2粒度太细，合并到父类）
+- "RAG" → "Retrieval-Augmented Generation"（同一个概念，首字母缩写）
 
-### Key principle: **related ≠ same**. Two items sharing a few characters in their name, or belonging to the same domain / document family / industry, is NOT a reason to merge. **ABSOLUTELY DO NOT** merge different products, different companies, different versions, or different certificates/documents just because they belong to the same category. When in doubt, do NOT merge. It is far better to have two separate pages for the same thing than to wrongly merge two different things.
+### 错误合并例子 — 不要合并这些：
+- "保险产品类" → "银行产品类"（都属于金融产品但是不同类别，不要合并）
+- "人身保险产品" → "财产保险产品"（都是保险产品下的不同子分类，但各自都有足够内容独立存在）
+- "法律主体类" → "法律责任类"（都属于法律领域但一个是主体一个是责任，完全不同类别）
+- "监管规则类" → "监管机构类"（都和监管相关但一个是规则一个是机构，不同类别）
+- "AI安全" → "内容审核机制"（相关话题但不同概念）
+- "机器学习" → "神经网络"（神经网络是机器学习子集，但各自内容足够独立，不合并）
 
-Return a JSON object with a "merges" map. The key is the NEW item's slug, the value is the EXISTING page's slug that it should merge into. Only include items where you are highly confident they are the same thing.
+### 核心原则
+- **相关 ≠ 相同**：两个条目属于同一个领域，不是合并的理由。
+- **L2粒度一致性 > 绝对精确**：对于L2实体类，宁可合并到更宽泛的类别保持层级一致，也不要留下一堆粒度太细的孤类。
+- **包含关系的判断**：父类/子类关系本身不等于合并理由，只有当子类太细、不足以成为独立L2时才合并。
+- **存疑不合并**：概念类别的合并标准更严格，存疑的时候不要合并。两个不同东西分开存比错误合并好得多。
 
-If no items match any existing pages, return: {"merges": {}}
+返回一个JSON对象，带一个"merges"字典。key是新条目的slug，value是它应该合并进入的已有页面slug。只包含你高度确信是同一个东西的条目。
 
-### JSON Formatting Rules
-- **CRITICAL**: Do NOT use literal newline characters inside JSON string values. If you need a newline in a string, you MUST use the escaped sequence \n.
+如果没有条目匹配任何已有页面，返回：{"merges": {}}
+
+### JSON 格式规则
+- **关键：** JSON字符串值内部不要使用字面换行。如果需要换行，必须使用转义序列 \n。
 </instructions>
 
-Output ONLY valid JSON. Example:
-{"merges": {"entity/acme-corporation": "entity/acme-corp", "concept/rag": "concept/retrieval-augmented-generation"}}`
+只输出合法JSON。例子：
+{"merges": {"entity/financial-institutions": "entity/financial-institution-category", "concept/rag": "concept/retrieval-augmented-generation"}}`
 
-// Granularity guidance blocks injected into WikiCandidateSlugPrompt. The
-// pipeline resolves a KnowledgeBase's configured granularity to one of these
-// strings via WikiGranularityGuidance().
-//
-// The three levels form a spectrum from "only the document's main subjects"
-// to "every named thing you see". Moving down the list monotonically
-// increases the candidate slug count, the downstream chunk-citation cost,
-// and the noise-to-signal ratio of the wiki index.
+// 抽取粒度指引文本，注入到 WikiCandidateSlugPrompt 中。
+// 流水线通过 WikiGranularityGuidance() 将知识库配置的 granularity
+// 解析为以下三个字符串之一。三个级别构成一个从"只提取最核心领域大类"
+// 到"尽可能细的分类都提取"的光谱，越往下候选 slug 越多、
+// 下游 chunk 引用成本越高、索引噪声也越大。
+// 注意：这里的"实体"指实体类（第二层本体，类别级），不是具体实例。
 const (
-	WikiGranularityGuidanceFocused = `**FOCUSED mode — aggressive pruning.**
-Extract ONLY the document's primary subjects: the handful of entities/concepts that this document is fundamentally ABOUT.
+	WikiGranularityGuidanceFocused = `**FOCUSED — 聚焦模式，激进剪枝。**
+只抽取文档最核心的**领域大类**（实体类，第二层本体）和最关键的概念。
 
-INCLUDE:
-- The document's main subject(s) — e.g. for a resume: the person and their named projects; for an announcement: the announcing organization and the event/product being announced; for a product page: the product itself and its maker.
-- At most 3-7 items total across entities and concepts combined.
+包含（实体类）：
+- 文档的核心领域大类 — 例如保险行业报告："保险产品类"、"金融机构类"、"监管规则类"；医疗文档："医疗机构类"、"药品类"。
+- 总共实体类加概念最多3-7个条目。
 
-EXCLUDE (even if named explicitly):
-- Technology stacks / libraries / frameworks mentioned in passing (e.g. a resume listing "Spring Boot, MySQL, Redis" — do NOT extract these).
-- Generic concepts and methodologies that are merely referenced (e.g. "microservices", "async processing", "stateless authentication", "streaming response" mentioned as an implementation detail).
-- Places, schools, or organizations mentioned only as background (e.g. alma mater of a resume owner, unless the document is ABOUT the school itself).
-- Anything that would normally get a one-sentence description because there is not enough content to say more.
+排除（即使显式命名也排除）：
+- 细分的二级类别（例如报告里提到了"两全保险"、"年金保险"，聚焦模式只保留"保险产品类"这一个大类）。
+- 只是作为背景提到的通用类别。
+- 任何具体单个实例（具体公司名、具体产品名、具体人名）—— 那些不属于本体建模范畴。
+- 任何正常情况下一句话就能说完，但没有足够内容多说的类别。
 
-If you are unsure whether an item belongs, LEAVE IT OUT. A clean, focused index is more valuable than a comprehensive but noisy one.`
+如果你不确定一个条目是否应该包含，**排除它**。干净聚焦的索引比全面但噪声多的索引更有价值。`
 
-	WikiGranularityGuidanceStandard = `**STANDARD mode — balanced (default).**
-Extract the document's main subjects PLUS entities/concepts that are substantively discussed — meaning they have a dedicated paragraph, multiple bullet points, or at least 2-3 sentences of context.
+	WikiGranularityGuidanceStandard = `**STANDARD — 标准模式，平衡（默认）。**
+抽取文档的核心领域大类**加上**被实质性讨论的二级实体类（第二层本体）—— 也就是说它们有专门一个段落、多个项目符号，或者至少2-3句话上下文说明其特征和范围。
 
-INCLUDE:
-- The document's main subject(s).
-- Secondary entities/concepts that receive a concrete block of content (a paragraph, a multi-point list, or a dedicated sub-section).
-- Named methodologies, architectures, or techniques when the document explains HOW the subject uses them — not merely names them.
+包含（实体类）：
+- 文档的核心领域大类（如"保险产品类"、"金融机构类"）。
+- 获得具体内容块（一个段落、一个多项目列表，或者专门子章节）的二级类别（如"人身保险产品"、"财产保险产品"、"保险机构"、"监管文件"）。
+- 文档明确解释了其定义、特征、分类方式的类别 — 不只是仅仅提到名字。
 
-EXCLUDE:
-- Items mentioned only in a comma-separated list of technologies without any further explanation (e.g. "Tech stack: A, B, C, D" — none of A/B/C/D are extracted unless they each also receive their own paragraph elsewhere).
-- One-off mentions, parenthetical references, and generic infrastructure nouns.
-- Items whose entire contribution to the document would fit in a single short sentence.
+排除：
+- 没有进一步解释的、只是一句话带过的细分类别。
+- 一次性提到、括号引用的类别名称。
+- 具体单个实例（具体公司名、具体产品名、具体人名）—— 那些不属于本体建模范畴。
+- 整个贡献只能放在一句话里面的条目。
 
-Aim for a tight, curated index. When in doubt about a marginal item, prefer to EXCLUDE it.`
+目标是紧凑精心整理的类别索引。存疑的时候，**优先排除**。`
 
-	WikiGranularityGuidanceExhaustive = `**EXHAUSTIVE mode — maximum recall.**
-Extract every named entity and every recognizable concept, including technologies, tools, standards, and methodologies mentioned even once by name, provided they are concrete and well-known (not generic terms like "database" or "function").
+	WikiGranularityGuidanceExhaustive = `**EXHAUSTIVE — 穷尽模式，最大召回。**
+尽可能细地抽取每个可识别的实体类（第二层本体）和概念，只要它们是类别级别的分类（不是具体单个实例），哪怕只提到一次也要提取。
 
-INCLUDE:
-- All main and secondary subjects.
-- All named technologies, libraries, frameworks, databases, services, protocols, or standards.
-- All recognizable concepts and methodologies that have widely-used names (e.g. RAG, microservices, async processing, SSE, JWT).
+包含（实体类）：
+- 所有核心领域大类和二级类别。
+- 所有可识别的细分类别，即使只提到一次，只要它们是明确的分类级别（例如"分红型保险产品"、"万能型保险产品"、"人寿保险公司"、"财产保险公司"）。
+- 所有有明确分类语义的名词，只要不是通用词。
 
-EXCLUDE ONLY:
-- Truly generic terms (e.g. "server", "function", "data").
-- Items that appear only inside URL paths or reference citations.
+只排除：
+- 真正通用术语（例如"机构"、"产品"、"文件" —— 太宽泛没有分类意义的词）。
+- 具体单个实例（具体公司名、具体产品名、具体人名）—— 那些不属于本体建模范畴。
+- 只出现在URL路径或引用引用中的条目。
 
-Use this mode when the knowledge base functions as a technical glossary rather than a curated narrative wiki.`
+当知识库作为类别术语表而不是精心整理叙事Wiki时使用这个模式。`
 )
 
-// WikiGranularityGuidance returns the guidance text to inject into the
-// WikiCandidateSlugPrompt template for the given granularity. Accepts the
-// raw string value stored in WikiConfig.ExtractionGranularity; callers do
-// NOT need to Normalize() first — unknown values fall through to standard.
+// WikiRelationExtractPrompt 用于抽取两个Wiki实体类页面之间的结构化语义关系。
+// 关系的两端是两个实体类本身（源实体类 → 目标实体类），
+// 页面的完整正文内容作为判断关系的依据输入给LLM。
+// 关系类型是开放的，由模型根据内容自由判断，不做枚举限制。
+const WikiRelationExtractPrompt = `你是一个本体关系抽取专家。给定两个Wiki页面（每个页面代表一个**实体类**或**概念**），请分析这两个实体类/概念之间是否存在明确的结构化语义关系。
+
+关系的两端是**两个实体类本身**，不是页面内容里的某个段落或事物。
+页面的完整正文内容是你判断关系的依据——你需要通过阅读两个实体类的完整定义、涵盖范围、特征描述等来判断这两个类别之间有什么关系。
+
+---
+
+## 实体类 A（源）
+
+- **名称**：{{.SourceTitle}}
+- **类型**：{{.SourceType}}
+- **一句话简介**：{{.SourceSummary}}
+
+**完整定义与描述（判断依据）：**
+<source_content>
+{{.SourceContent}}
+</source_content>
+
+---
+
+## 实体类 B（目标）
+
+- **名称**：{{.TargetTitle}}
+- **类型**：{{.TargetType}}
+- **一句话简介**：{{.TargetSummary}}
+
+**完整定义与描述（判断依据）：**
+<target_content>
+{{.TargetContent}}
+</target_content>
+
+---
+
+## 任务
+
+请判断 **实体类 A（{{.SourceTitle}}）** 和 **实体类 B（{{.TargetTitle}}）** 之间是否存在明确的语义关系。
+
+### 关系判断要求
+
+1. **relation_type**：关系类型的简短英文标识（snake_case，如 subclass_of、part_of、regulates、governs、contains 等）。由你根据内容自由判断，不受限制，不要局限于示例。如果两个实体类之间不存在明确关系，填 "none"。
+
+2. **relation_label**：正向关系的中文标签（简短动词短语，从A指向B，如"属于"、"是...的组成部分"、"监管"、"由...构成"等）。
+
+3. **reverse_label**：反向关系的中文标签（从B指向A，如"包含"、"由...组成"、"被...监管"、"构成了"等）。
+
+4. **description**：用1-2句话说明关系的具体含义和判断依据。
+
+5. **confidence**：你对这个关系判断的确信度，0.0 - 1.0 之间。
+
+### 输出要求
+
+- 必须**严格基于两个页面的完整正文内容**来判断，不能仅凭标题或摘要推测
+- 如果正文内容中没有足够证据支持明确的关系，输出 relation_type: "none"
+- relation_type 是开放的，你可以根据实际语义自由命名，不要被任何限制
+- 常见的关系类型举例（仅作参考，不限于此）：
+  - subclass_of — 子类/父类
+  - part_of — 组成/部分
+  - regulates / governs — 监管/治理
+  - contains / includes — 包含/包括
+  - related_to — 一般关联
+  - disjoint_from — 互斥
+  - 等等...
+
+### 输出格式（严格 JSON，纯JSON，不要包含任何其他文本或 Markdown 代码块标记）：
+
+{
+  "relation_type": "subclass_of",
+  "relation_label": "属于",
+  "reverse_label": "包含",
+  "description": "人身保险产品是以人的生命和身体为保险标的的保险产品，是保险产品大类下的一个主要子类。",
+  "confidence": 0.95
+}`
+
+// WikiGranularityGuidance 根据给定的粒度级别，返回要注入到
+// WikiCandidateSlugPrompt 模板中的中文指引文本。接受
+// WikiConfig.ExtractionGranularity 中存储的原始字符串值；
+// 调用方不需要先 Normalize()，未知值会回落到 standard。
 func WikiGranularityGuidance(granularity string) string {
 	switch granularity {
 	case "focused":

@@ -724,6 +724,32 @@ type WikiGraphEdge struct {
 	Target string `json:"target"` // target slug
 }
 
+// WikiPageRelation 表示两个Wiki页面之间的结构化语义关系。
+// 用于L2本体关系提取（实体类与实体类之间的关系）。
+type WikiPageRelation struct {
+	ID              string  `json:"id" gorm:"type:varchar(36);primaryKey"`
+	TenantID        uint64  `json:"tenant_id" gorm:"index"`
+	KnowledgeBaseID string  `json:"knowledge_base_id" gorm:"type:varchar(36);index:idx_wiki_relations_kb_source"`
+	SourceSlug      string  `json:"source_slug" gorm:"type:varchar(255);index:idx_wiki_relations_kb_source"`
+	TargetSlug      string  `json:"target_slug" gorm:"type:varchar(255);index:idx_wiki_relations_kb_target"`
+	RelationType    string  `json:"relation_type" gorm:"type:varchar(64);index:idx_wiki_relations_kb_type"`
+	RelationLabel   string  `json:"relation_label" gorm:"type:varchar(128)"`
+	ReverseLabel    string  `json:"reverse_label" gorm:"type:varchar(128);default:''"`
+	Description     string  `json:"description" gorm:"type:text"`
+	Confidence      float64 `json:"confidence" gorm:"type:float;default:1.0"`
+	SourcePageType  string  `json:"source_page_type" gorm:"type:varchar(32)"`
+	TargetPageType  string  `json:"target_page_type" gorm:"type:varchar(32)"`
+	GeneratedBy     string  `json:"generated_by" gorm:"type:varchar(16);default:'pipeline'"`
+	Version         int     `json:"version" gorm:"default:1"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// TableName 指定数据库表名
+func (WikiPageRelation) TableName() string {
+	return "wiki_page_relations"
+}
+
 // WikiStats provides aggregate statistics about the wiki
 type WikiStats struct {
 	TotalPages    int64            `json:"total_pages"`

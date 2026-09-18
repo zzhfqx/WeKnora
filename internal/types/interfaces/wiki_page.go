@@ -87,6 +87,16 @@ type WikiPageService interface {
 	// GetStats returns aggregate statistics about the wiki.
 	GetStats(ctx context.Context, kbID string) (*types.WikiStats, error)
 
+	// GetPageRelations 查询指定页面的实体类关系
+	// outgoing: 当前页作为源的正向关系
+	// incoming: 当前页作为目标的反向关系
+	// 只返回 entity-entity 类型的关系
+	GetPageRelations(ctx context.Context, kbID, slug string) (
+		outgoing []types.WikiPageRelation,
+		incoming []types.WikiPageRelation,
+		err error,
+	)
+
 	// RebuildLinks re-parses all pages and rebuilds bidirectional link references.
 	RebuildLinks(ctx context.Context, kbID string) error
 

@@ -182,6 +182,33 @@ export function getWikiPage(kbId: string, slug: string) {
   return get(`/api/v1/knowledgebase/${kbId}/wiki/pages/${encodeSlugPath(slug)}`);
 }
 
+// Wiki 页面关系
+export interface WikiPageRelation {
+  id: string;
+  source_slug: string;
+  target_slug: string;
+  relation_type: string;
+  relation_label: string;
+  reverse_label: string;
+  description: string;
+  confidence: number;
+  source_page_type: string;
+  target_page_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WikiPageRelationsResponse {
+  outgoing: WikiPageRelation[];
+  incoming: WikiPageRelation[];
+}
+
+export function getWikiPageRelations(kbId: string, slug: string) {
+  return get<WikiPageRelationsResponse>(
+    `/api/v1/knowledgebase/${kbId}/wiki/relations/${encodeSlugPath(slug)}`
+  );
+}
+
 // WikiPageUpdatePayload is a partial update: absent fields keep their stored
 // value. `version` is the optimistic-lock guard — send the version the page
 // had when the user started editing; the backend answers 409 (with
