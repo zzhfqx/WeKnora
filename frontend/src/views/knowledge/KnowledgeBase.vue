@@ -56,6 +56,7 @@ import KbTagManageDrawer from './components/KbTagManageDrawer.vue';
 import type { KnowledgeProcessOverrides } from '@/types/knowledgeProcess';
 import { useUploadConfirmStore, type UploadConfirmResult } from '@/stores/uploadConfirm';
 import WikiBrowser from './wiki/WikiBrowser.vue';
+import Neo4jGraphViewer from './wiki/Neo4jGraphViewer.vue';
 import { getWikiStats } from '@/api/wiki';
 import {
   isKnowledgeParseInFlight,
@@ -87,7 +88,12 @@ const kbLoading = ref(false);
 const docListLoading = ref(true);
 const isFAQ = computed(() => (kbInfo.value?.type || '') === 'faq');
 const isWiki = computed(() => !!kbInfo.value?.indexing_strategy?.wiki_enabled);
-const validTabs = ['documents', 'wiki', 'graph'] as const
+const isNeo4jGraphEnabled = computed(() => {
+  const engine = editorResources.systemInfo?.graph_database_engine;
+  const graphEnabled = kbInfo.value?.indexing_strategy?.graph_enabled;
+  return engine && engine !== 'Not Enabled' && graphEnabled;
+});
+const validTabs = ['documents', 'wiki', 'wiki-graph', 'neo4j-graph'] as const
 type KbTab = typeof validTabs[number]
 const initTab = validTabs.includes(route.query.tab as any) ? (route.query.tab as KbTab) : 'documents'
 const activeKbTab = ref<KbTab>(initTab);
@@ -110,8 +116,8 @@ const onWikiStatusChange = (payload: { pendingTasks: number; isActive: boolean; 
 const onViewWikiInGraph = async (slug: string) => {
   // Write tab+slug first so the activeKbTab watcher's later replace
   // (which spreads route.query) preserves slug instead of clobbering it.
-  await router.replace({ query: { ...route.query, tab: 'graph', slug } })
-  activeKbTab.value = 'graph'
+  await router.replace({ query: { ...route.query, tab: 'wiki-graph', slug } })
+  activeKbTab.value = 'wiki-graph'
 }
 
 let wikiStatusTimer: ReturnType<typeof setInterval> | null = null
@@ -2356,27 +2362,36 @@ async function createNewSession(value: string): Promise<void> {
                 </template>
               </button>
               <t-icon name="chevron-right" class="breadcrumb-separator" />
-              <template v-if="isWiki">
+              <template v-if="isWiki || isNeo4jGraphEnabled">
                 <span :class="['breadcrumb-tab', { active: activeKbTab === 'documents' }]"
                   @click="activeKbTab = 'documents'">{{ $t('knowledgeEditor.wikiBrowser.tabDocuments') }}</span>
-                <span class="breadcrumb-tab-sep">/</span>
-                <span :class="['breadcrumb-tab', { active: activeKbTab === 'wiki', indexing: wikiIsIndexing }]"
-                  @click="activeKbTab = 'wiki'">
-                  Wiki
-                  <t-tooltip v-if="wikiIsIndexing" :content="wikiIndexingTip" placement="bottom">
-                    <t-loading size="small" class="breadcrumb-tab-indicator" />
-                  </t-tooltip>
-                </span>
-                <span class="breadcrumb-tab-sep">/</span>
-                <t-tooltip :content="$t('knowledgeEditor.wikiBrowser.tabGraphTip')" placement="bottom">
-                  <span :class="['breadcrumb-tab', { active: activeKbTab === 'graph', indexing: wikiIsIndexing }]"
-                    @click="activeKbTab = 'graph'">
-                    {{ $t('knowledgeEditor.wikiBrowser.tabGraph') }}
+                <template v-if="isWiki">
+                  <span class="breadcrumb-tab-sep">/</span>
+                  <span :class="['breadcrumb-tab', { active: activeKbTab === 'wiki', indexing: wikiIsIndexing }]"
+                    @click="activeKbTab = 'wiki'">
+                    Wiki
                     <t-tooltip v-if="wikiIsIndexing" :content="wikiIndexingTip" placement="bottom">
                       <t-loading size="small" class="breadcrumb-tab-indicator" />
                     </t-tooltip>
                   </span>
-                </t-tooltip>
+                  <span class="breadcrumb-tab-sep">/</span>
+                  <t-tooltip :content="$t('knowledgeEditor.wikiBrowser.tabGraphTip')" placement="bottom">
+                    <span :class="['breadcrumb-tab', { active: activeKbTab === 'wiki-graph', indexing: wikiIsIndexing }]"
+                      @click="activeKbTab = 'wiki-graph'">
+                      Wiki图谱
+                      <t-tooltip v-if="wikiIsIndexing" :content="wikiIndexingTip" placement="bottom">
+                        <t-loading size="small" class="breadcrumb-tab-indicator" />
+                      </t-tooltip>
+                    </span>
+                  </t-tooltip>
+                </template>
+                <template v-if="isNeo4jGraphEnabled">
+                  <span class="breadcrumb-tab-sep">/</span>
+                  <span :class="['breadcrumb-tab', { active: activeKbTab === 'neo4j-graph' }]"
+                    @click="activeKbTab = 'neo4j-graph'">
+                    Neo4j图谱
+                  </span>
+                </template>
               </template>
               <span v-else class="breadcrumb-current">{{ $t('knowledgeEditor.document.title') }}</span>
             </h2>
@@ -2408,11 +2423,23 @@ async function createNewSession(value: string): Promise<void> {
         </div>
       </div>
 
-      <!-- Wiki Browser / Graph (shown when wiki or graph tab is active) -->
-      <div v-if="isWiki && (activeKbTab === 'wiki' || activeKbTab === 'graph')" class="wiki-main-area">
-        <WikiBrowser v-if="kbId" :knowledge-base-id="kbId" :view="activeKbTab === 'graph' ? 'graph' : 'browser'"
+      <!-- Wiki Browser (shown when wiki tab is active) -->
+      <div v-if="isWiki && activeKbTab === 'wiki'" class="wiki-main-area">
+        <WikiBrowser v-if="kbId" :knowledge-base-id="kbId" view="browser"
           :can-edit="canEdit" @open-source-doc="openSourceDoc" @status-change="onWikiStatusChange"
           @view-graph="onViewWikiInGraph" />
+      </div>
+
+      <!-- Wiki Graph (shown when wiki-graph tab is active) -->
+      <div v-if="isWiki && activeKbTab === 'wiki-graph'" class="wiki-main-area">
+        <WikiBrowser v-if="kbId" :knowledge-base-id="kbId" view="graph"
+          :can-edit="canEdit" @open-source-doc="openSourceDoc" @status-change="onWikiStatusChange"
+          @view-graph="onViewWikiInGraph" />
+      </div>
+
+      <!-- Neo4j Knowledge Graph (shown when neo4j-graph tab is active) -->
+      <div v-if="isNeo4jGraphEnabled && activeKbTab === 'neo4j-graph'" class="neo4j-graph-area">
+        <Neo4jGraphViewer v-if="kbId" :knowledge-base-id="kbId" />
       </div>
 
       <template v-if="activeKbTab === 'documents' || !isWiki">
@@ -2859,7 +2886,8 @@ async function createNewSession(value: string): Promise<void> {
   font-weight: 400;
 }
 
-.wiki-main-area {
+.wiki-main-area,
+.neo4j-graph-area {
   flex: 1;
   min-height: 0;
   overflow: hidden;

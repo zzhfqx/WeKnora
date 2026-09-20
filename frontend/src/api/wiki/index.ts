@@ -378,3 +378,105 @@ export function updateWikiIssueStatus(kbId: string, issueId: string, status: str
 export function rebuildWikiLinks(kbId: string) {
   return post(`/api/v1/knowledgebase/${kbId}/wiki/rebuild-links`, {});
 }
+
+// ===== Neo4j 知识图谱可视化 =====
+
+export interface Neo4jGraphNode {
+  name: string;
+  attributes: string[];
+  degree: number;
+  chunk_count: number;
+}
+
+export interface Neo4jGraphRelation {
+  source: string;
+  target: string;
+  type: string;
+}
+
+export interface Neo4jGraphMeta {
+  mode: 'overview' | 'ego';
+  total_nodes: number;
+  total_rels: number;
+  returned: number;
+  truncated: boolean;
+  center_node?: string;
+  depth?: number;
+}
+
+export interface Neo4jGraphData {
+  nodes: Neo4jGraphNode[];
+  relations: Neo4jGraphRelation[];
+  meta: Neo4jGraphMeta;
+}
+
+export interface Neo4jGraphStats {
+  node_count: number;
+  rel_count: number;
+  rel_types: string[];
+}
+
+export interface Neo4jNodeDetail {
+  name: string;
+  attributes: string[];
+  degree: number;
+  chunk_count: number;
+  neighbor_count: number;
+  rel_types: Record<string, number>;
+  top_neighbors: Neo4jGraphNode[];
+}
+
+export interface Neo4jGraphQueryParams {
+  mode?: 'overview' | 'ego';
+  center?: string;
+  depth?: number;
+  limit?: number;
+  rel_types?: string[];
+}
+
+// getNeo4jGraph fetches graph data for Neo4j knowledge graph visualization.
+export function getNeo4jGraph(kbId: string, params?: Neo4jGraphQueryParams) {
+  const query = new URLSearchParams();
+  if (params) {
+    if (params.mode) query.set('mode', params.mode);
+    if (params.center) query.set('center', params.center);
+    if (params.depth !== undefined) query.set('depth', String(params.depth));
+    if (params.limit !== undefined) query.set('limit', String(params.limit));
+    if (params.rel_types && params.rel_types.length > 0) {
+      query.set('rel_types', params.rel_types.join(','));
+    }
+  }
+  const qs = query.toString();
+  return get<Neo4jGraphData>(
+    `/api/v1/knowledgebase/${kbId}/graph/neo4j${qs ? '?' + qs : ''}`
+  );
+}
+
+// searchNeo4jNodes fuzzy-searches entity nodes by name.
+export function searchNeo4jNodes(kbId: string, q: string, limit = 20) {
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  return get<Neo4jGraphNode[]>(
+    `/api/v1/knowledgebase/${kbId}/graph/neo4j/search?${params.toString()}`
+  );
+}
+
+// getNeo4jGraphStats returns graph statistics.
+export function getNeo4jGraphStats(kbId: string) {
+  return get<Neo4jGraphStats>(
+    `/api/v1/knowledgebase/${kbId}/graph/neo4j/stats`
+  );
+}
+
+// getNeo4jRelationTypes returns all distinct relation types.
+export function getNeo4jRelationTypes(kbId: string) {
+  return get<string[]>(
+    `/api/v1/knowledgebase/${kbId}/graph/neo4j/relation-types`
+  );
+}
+
+// getNeo4jNodeDetail returns detailed info about a single node.
+export function getNeo4jNodeDetail(kbId: string, name: string) {
+  return get<Neo4jNodeDetail>(
+    `/api/v1/knowledgebase/${kbId}/graph/neo4j/node/${encodeURIComponent(name)}`
+  );
+}

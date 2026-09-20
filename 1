@@ -1,0 +1,132 @@
+./scripts/dev.sh app
+[0;34m[INFO][0m 启动后端应用（本地开发模式）...
+[0;34m[INFO][0m 加载环境配置...
+[0;34m[INFO][0m 环境变量已设置，启动应用...
+[0;34m[INFO][0m 数据库地址: 127.0.0.1:65432
+[0;34m[INFO][0m 未检测到 anydoc 静态库，解析引擎不可用。需要时先运行: make anydoc-lib
+[0;34m[INFO][0m 未检测到 Air，使用普通模式启动
+[1;33m[WARNING][0m 提示: 安装 Air 可以实现代码修改后自动重启
+[0;34m[INFO][0m 安装命令: go install github.com/air-verse/air@latest
+INFO [2026-09-18 13:18:40.962] [] startup.go:128[LogStartupEnv] | [startup-env] resolved environment:
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   AUTO_MIGRATE=true
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DB_DRIVER=postgres
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DB_HOST=127.0.0.1
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DB_NAME=WeKnora
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DB_PASSWORD=set (14 chars)
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DB_PATH=<unset>
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DB_PORT=65432
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DB_USER=postgres
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   DOCREADER_ADDR=127.0.0.1:15051
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   GIN_MODE=release
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   JWT_SECRET=set (18 chars)
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   MINIO_BUCKET_NAME=<unset>
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   MINIO_ENDPOINT=127.0.0.1:19000
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   MINIO_SECRET_ACCESS_KEY=<unset>
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   REDIS_ADDR=127.0.0.1:16379
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   REDIS_PASSWORD=set (11 chars)
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   REDIS_TLS_SERVER_NAME=<unset>
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   REDIS_USE_TLS=<unset>
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   RETRIEVE_DRIVER=postgres
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   STORAGE_TYPE=local
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   SYSTEM_AES_KEY=set (32 chars)
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   TOS_BUCKET_NAME=<unset>
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   TOS_ENDPOINT=<unset>
+INFO [2026-09-18 13:18:40.971] [] startup.go:131[LogStartupEnv] | [startup-env]   TOS_SECRET_KEY=<unset>
+DEBUG[2026-09-18 13:18:40.971] [] container.go:110[BuildContainer] | [Container] Starting container initialization...
+DEBUG[2026-09-18 13:18:40.971] [] container.go:116[BuildContainer] | [Container] Registering core infrastructure...
+INFO [2026-09-18 13:18:40.972] [] manager.go:105[Init] | [Langfuse] enabled host=http://langfuse-web:3000 flush_at=15 flush_interval=3s sample_rate=1.00 (OTLP/OTel SDK)
+Using configuration file: /root/home/workspace_cribc/my_weknora/WeKnora/config/config.yaml
+[config] tenant RBAC enforcement: enable_rbac=true cross_tenant_access=false (env: WEKNORA_TENANT_ENABLE_RBAC="" WEKNORA_TENANT_ENABLE_CROSS_TENANT_ACCESS="")
+DEBUG[2026-09-18 13:18:41.022] [] container.go:130[BuildContainer] | [Container] Registering retrieval engine registry...
+DEBUG[2026-09-18 13:18:41.022] [] container.go:134[BuildContainer] | [Container] Registering external service clients...
+DEBUG[2026-09-18 13:18:41.022] [] container.go:140[BuildContainer] | [Container] Initializing DuckDB...
+DEBUG[2026-09-18 13:18:41.022] [] container.go:142[BuildContainer] | [Container] DuckDB registered
+DEBUG[2026-09-18 13:18:41.022] [] container.go:145[BuildContainer] | [Container] Registering repositories...
+DEBUG[2026-09-18 13:18:41.024] [] container.go:185[BuildContainer] | [Container] Registering MCP manager...
+DEBUG[2026-09-18 13:18:41.024] [] container.go:191[BuildContainer] | [Container] Registering sandbox manager...
+DEBUG[2026-09-18 13:18:41.024] [] container.go:200[BuildContainer] | [Container] Registering business services...
+DEBUG[2026-09-18 13:18:41.029] [] container.go:254[BuildContainer] | [Container] Registering web search registry and providers...
+DEBUG[2026-09-18 13:18:41.032] [] container.go:285[BuildContainer] | [Container] Registering event bus and agent service...
+DEBUG[2026-09-18 13:18:41.033] [] container.go:297[BuildContainer] | [Container] Registering memory service...
+DEBUG[2026-09-18 13:18:41.033] [] container.go:300[BuildContainer] | [Container] Registering session service...
+DEBUG[2026-09-18 13:18:41.035] [] container.go:320[BuildContainer] | [Container] Registering task enqueuer...
+INFO [2026-09-18 13:18:41.039] [] container.go:672[initDatabase] | Skip embedding: false
+INFO [2026-09-18 13:18:41.039] [] container.go:685[initDatabase] | DB Config: user=postgres host=127.0.0.1 port=65432 dbname=WeKnora
+INFO [2026-09-18 13:18:41.050] [] container.go:745[initDatabase] | Running database migrations...
+INFO [2026-09-18 13:18:41.050] [] migration.go:104[RunMigrationsWithOptions] | Starting database migration...
+INFO [2026-09-18 13:18:41.070] [] migration.go:157[RunMigrationsWithOptions] | Current migration version: 93, dirty: false
+INFO [2026-09-18 13:18:41.070] [] migration.go:194[RunMigrationsWithOptions] | Running pending migrations...
+INFO [2026-09-18 13:18:41.072] [] migration.go:250[RunMigrationsWithOptions] | Database is up to date (version: 93)
+INFO [2026-09-18 13:18:41.078] [] container.go:958[syncSequences] | Synced sequence chunks_seq_id_seq with table chunks
+INFO [2026-09-18 13:18:41.079] [] container.go:958[syncSequences] | Synced sequence knowledge_tags_seq_id_seq with table knowledge_tags
+2026/09/18 13:18:41 [builtin-models] config not present at /root/home/workspace_cribc/my_weknora/WeKnora/config/builtin_models.yaml; skipping
+
+2026/09/18 13:18:41 [31;1m/root/home/workspace_cribc/my_weknora/WeKnora/internal/application/repository/system_setting.go:33 [35;1mrecord not found
+[0m[33m[1.213ms] [34;1m[rows:0][0m SELECT * FROM "system_settings" WHERE key = 'model.max_concurrency' ORDER BY "system_settings"."id" LIMIT 1
+INFO [2026-09-18 13:18:41.091] [] container.go:587[registerModelConcurrencyLimiter] | [ModelLimiter] background model concurrency governed per-model, limit=32 (distributed via redis)
+INFO [2026-09-18 13:18:41.092] [] grpc_parser.go:72[connect] | Connected to docreader in 658.51µs
+INFO [2026-09-18 13:18:41.093] []                      | Ollama base URL: http://host.docker.internal:11434
+INFO [2026-09-18 13:18:41.093] []                      | Ollama service set to optional mode
+DEBUG[2026-09-18 13:18:41.097] [] container.go:357[BuildContainer] | [Container] Registering chat pipeline plugins...
+DEBUG[2026-09-18 13:18:41.098] [] container.go:360[BuildContainer] | [Container] Registering data source sync framework...
+INFO [2026-09-18 13:18:41.101] [] system_setting.go:399[preload] | [system_settings] cache loaded 0 keys (instance=15cb7970)
+INFO [2026-09-18 13:18:41.101] [] system_setting.go:527[applySSRFWhitelist] | [system_settings] SSRF whitelist applied (0 primary entries, extra=false)
+INFO [2026-09-18 13:18:41.101] [] system_setting.go:543[applyModelMaxConcurrency] | [system_settings] model.max_concurrency applied (limit=32)
+INFO [2026-09-18 13:18:41.101] [] system_setting.go:549[applyDockerBackendEnabled] | [system_settings] sandbox.docker_enabled applied (enabled=false)
+INFO [2026-09-18 13:18:41.101] [] scheduler.go:73[Start] | [Scheduler] started with 0 cron entries
+DEBUG[2026-09-18 13:18:41.101] [] container.go:365[BuildContainer] | [Container] Data source sync framework registered
+INFO [2026-09-18 13:18:41.102] [] audit_log_retention.go:94[func1] | [audit-retention] starting daily sweep: retention_days=90 interval=24h0m0s
+DEBUG[2026-09-18 13:18:41.102] [] container.go:367[BuildContainer] | [Container] Audit log retention runner registered
+INFO [2026-09-18 13:18:41.102] [] knowledge_housekeeping.go:94[Start] | [Housekeeping] started with 5-minute sweep
+DEBUG[2026-09-18 13:18:41.102] [] container.go:370[BuildContainer] | [Container] Knowledge housekeeping runner registered
+INFO [2026-09-18 13:18:41.102] []                      | [Postgres] Initializing PostgreSQL retriever engine repository
+INFO [2026-09-18 13:18:41.102] []                      | Register postgres retrieve engine success
+INFO [2026-09-18 13:18:42.697] [] sandbox.go:140[newTenantSandboxResolver] | Tenant sandbox resolver configured: binding=redis
+DEBUG[2026-09-18 13:18:42.698] [] container.go:389[BuildContainer] | [Container] Chat pipeline plugins registered
+INFO [2026-09-18 13:18:42.699] [] tenant_skill_reaper.go:789[Start] | [skill] reaper started with 5-minute sweep
+DEBUG[2026-09-18 13:18:42.699] [] container.go:396[BuildContainer] | [Container] Tenant skill reaper registered
+DEBUG[2026-09-18 13:18:42.699] [] container.go:399[BuildContainer] | [Container] Registering HTTP handlers...
+DEBUG[2026-09-18 13:18:42.717] [] container.go:449[BuildContainer] | [Container] Registering IM integration...
+INFO [2026-09-18 13:18:42.717] [] service.go:910[NewService] | [IM] Multi-instance mode enabled (instance=74831529, workers=5, queue=50, global_max=unlimited)
+INFO [2026-09-18 13:18:42.734] [] service.go:1013[LoadAndStartChannels] | [IM] Loaded 0 enabled channels
+DEBUG[2026-09-18 13:18:42.736] [] container.go:455[BuildContainer] | [Container] HTTP handlers registered
+DEBUG[2026-09-18 13:18:42.736] [] container.go:463[BuildContainer] | [Container] Registering router and starting task server...
+2026/09/18 13:18:42 asynq core-pool server starting with concurrency=8 total_upstream=32 redis_op_timeout=500ms
+2026/09/18 13:18:42 asynq postprocess-pool server starting with concurrency=2 total_upstream=32
+2026/09/18 13:18:42 asynq enrichment-pool server starting with concurrency=12 total_upstream=32
+2026/09/18 13:18:42 asynq maintenance-pool server starting with concurrency=4 total_upstream=32
+2026/09/18 13:18:42 asynq shared-pool server starting with concurrency=6 total_upstream=32
+2026/09/18 13:18:42 asynq wiki-pool server starting with concurrency=8
+asynq: pid=2751646 2026/09/18 05:18:42.739063 INFO: Starting processing
+asynq: pid=2751646 2026/09/18 05:18:42.739045 INFO: Starting processing
+asynq: pid=2751646 2026/09/18 05:18:42.739153 INFO: Send signal TSTP to stop processing new tasks
+asynq: pid=2751646 2026/09/18 05:18:42.739180 INFO: Send signal TSTP to stop processing new tasks
+asynq: pid=2751646 2026/09/18 05:18:42.739200 INFO: Send signal TERM or INT to terminate the process
+asynq: pid=2751646 2026/09/18 05:18:42.739131 INFO: Starting processing
+asynq: pid=2751646 2026/09/18 05:18:42.739183 INFO: Send signal TERM or INT to terminate the process
+asynq: pid=2751646 2026/09/18 05:18:42.739316 INFO: Starting processing
+asynq: pid=2751646 2026/09/18 05:18:42.739160 INFO: Starting processing
+asynq: pid=2751646 2026/09/18 05:18:42.739405 INFO: Send signal TSTP to stop processing new tasks
+asynq: pid=2751646 2026/09/18 05:18:42.739425 INFO: Send signal TERM or INT to terminate the process
+asynq: pid=2751646 2026/09/18 05:18:42.739336 INFO: Send signal TSTP to stop processing new tasks
+asynq: pid=2751646 2026/09/18 05:18:42.739467 INFO: Send signal TERM or INT to terminate the process
+asynq: pid=2751646 2026/09/18 05:18:42.739746 INFO: Send signal TSTP to stop processing new tasks
+asynq: pid=2751646 2026/09/18 05:18:42.739794 INFO: Send signal TERM or INT to terminate the process
+asynq: pid=2751646 2026/09/18 05:18:42.739394 INFO: Starting processing
+asynq: pid=2751646 2026/09/18 05:18:42.741046 INFO: Send signal TSTP to stop processing new tasks
+asynq: pid=2751646 2026/09/18 05:18:42.741121 INFO: Send signal TERM or INT to terminate the process
+INFO [2026-09-18 13:18:42.745] [] container.go:476[BuildContainer] | [Container] Container initialization completed successfully
+INFO [2026-09-18 13:18:42.750] [] files.go:244[serveFilesWithResources] | [Router] Serving files from /files
+INFO [2026-09-18 13:18:42.750] [] files.go:333[serveKBScopedFiles] | [Router] Serving KB-scoped files from /knowledge-bases/:id/files
+INFO [2026-09-18 13:18:42.753] [] system_setting.go:1108[runSubscribeLoop] | [system_settings] subscribed to weknora:system_settings:changed (instance=15cb7970)
+INFO [2026-09-18 13:18:42.753] [] startup.go:57[LogGinRouteCount] | [gin] registered 0 routes
+INFO [2026-09-18 13:18:42.753] [] main.go:132[func1]   | Server is running at 0.0.0.0:8082
+asynq: pid=2751646 2026/09/18 05:19:31.364513 INFO: Stopping processor
+INFO [2026-09-18 13:19:31.364] [] main.go:97[1]        | Received signal: interrupt, starting server shutdown...
+asynq: pid=2751646 2026/09/18 05:19:31.364587 INFO: Stopping processor
+asynq: pid=2751646 2026/09/18 05:19:31.364521 INFO: Stopping processor
+asynq: pid=2751646 2026/09/18 05:19:31.364536 INFO: Stopping processor
+asynq: pid=2751646 2026/09/18 05:19:31.364579 INFO: Stopping processor
+asynq: pid=2751646 2026/09/18 05:19:31.364580 INFO: Stopping processor
+FATAL[2026-09-18 13:19:31.364] [] main.go:141[main]    | Failed to run application: server error: accept tcp [::]:8082: use of closed network connection
+exit status 1

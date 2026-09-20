@@ -335,3 +335,19 @@ func RegisterWikiPageRoutes(r *gin.RouterGroup, wikiHandler *handler.WikiPageHan
 		wiki.PUT("/issues/:issue_id/status", g.OwnedWikiKBOrAdmin(), g.KBAccessWrite("kb_id"), wikiHandler.UpdateIssueStatus)
 	}
 }
+
+// RegisterNeo4jGraphRoutes registers Neo4j knowledge graph visualization routes.
+//
+// These routes live under /knowledgebase/:kb_id/graph/neo4j and provide
+// read-only endpoints for visualizing the entity-relation knowledge graph
+// stored in Neo4j. Access requires viewer-level access to the KB.
+func RegisterNeo4jGraphRoutes(r *gin.RouterGroup, graphHandler *handler.GraphNeo4jHandler, g *rbacGuards) {
+	kbGraph := g.apiKeyGroup(r.Group("/knowledgebase/:kb_id/graph/neo4j"), apiKeyRetrieve(apiKeyFullAccess()))
+	{
+		kbGraph.GET("", g.Viewer(), g.KBAccessRead("kb_id"), graphHandler.GetNeo4jGraph)
+		kbGraph.GET("/search", g.Viewer(), g.KBAccessRead("kb_id"), graphHandler.SearchNeo4jNodes)
+		kbGraph.GET("/stats", g.Viewer(), g.KBAccessRead("kb_id"), graphHandler.GetNeo4jGraphStats)
+		kbGraph.GET("/relation-types", g.Viewer(), g.KBAccessRead("kb_id"), graphHandler.GetNeo4jRelationTypes)
+		kbGraph.GET("/node/:name", g.Viewer(), g.KBAccessRead("kb_id"), graphHandler.GetNeo4jNodeDetail)
+	}
+}

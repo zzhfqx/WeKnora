@@ -63,19 +63,10 @@ func (n *Neo4jRepository) addGraph(ctx context.Context, namespace types.NameSpac
 
 	_, err := session.ExecuteWrite(ctx, func(tx neo4j.ManagedTransaction) (interface{}, error) {
 		// Node import query
-		// 核心改动：apoc.merge.node 只用知识库级标签 + name 作为匹配键
-		// 同一知识库下同名实体直接合并，chunks 和 attributes 合并去重
-		// （原逻辑用所有标签 + name + kg 匹配，导致不同 knowledge 的同名实体创建重复节点）
-		kbLabel := n.nodePrefix + _remove_hyphen(namespace.KnowledgeBase)
 		node_import_query := `
 			UNWIND $data AS row
-			CALL apoc.merge.node(row.labels, {name: row.name},
-				{attributes: row.attributes, chunks: row.chunks, kg: row.knowledge_id},
-				{}
-			) YIELD node
-			SET node.attributes = apoc.coll.union(coalesce(node.attributes, []), coalesce(row.attributes, []))
-			SET node.chunks = apoc.coll.union(coalesce(node.chunks, []), coalesce(row.chunks, []))
-			SET node.kg = row.knowledge_id
+			CALL apoc.merge.node(row.labels, {name: row.name, kg: row.knowledge_id}, row.props, {}) YIELD node
+			SET node.chunks = apoc.coll.union(node.chunks, row.chunks)
 			RETURN distinct 'done' AS result
 		`
 		nodeData := []map[string]interface{}{}
@@ -83,9 +74,9 @@ func (n *Neo4jRepository) addGraph(ctx context.Context, namespace types.NameSpac
 			nodeData = append(nodeData, map[string]interface{}{
 				"name":         node.Name,
 				"knowledge_id": namespace.Knowledge,
-				"attributes":   node.Attributes,
+				"props":        map[string][]string{"attributes": node.Attributes},
 				"chunks":       node.Chunks,
-				"labels":       []string{kbLabel},
+				"labels":       n.Labels(namespace),
 			})
 		}
 		if _, err := tx.Run(ctx, node_import_query, map[string]interface{}{"data": nodeData}); err != nil {
@@ -93,22 +84,22 @@ func (n *Neo4jRepository) addGraph(ctx context.Context, namespace types.NameSpac
 		}
 
 		// Relationship import query
-		// 关系两端的节点也用同样的合并策略（同名合并），避免创建重名空壳节点
 		rel_import_query := `
 			UNWIND $data AS row
-			CALL apoc.merge.node(row.labels, {name: row.source}, {kg: row.knowledge_id}, {}) YIELD node as source
-			CALL apoc.merge.node(row.labels, {name: row.target}, {kg: row.knowledge_id}, {}) YIELD node as target
-			CALL apoc.merge.relationship(source, row.type, {}, {}, target) YIELD rel
+			CALL apoc.merge.node(row.source_labels, {name: row.source, kg: row.knowledge_id}, {}, {}) YIELD node as source
+			CALL apoc.merge.node(row.target_labels, {name: row.target, kg: row.knowledge_id}, {}, {}) YIELD node as target
+			CALL apoc.merge.relationship(source, row.type, {}, row.attributes, target) YIELD rel
 			RETURN distinct 'done'
 		`
 		relData := []map[string]interface{}{}
 		for _, rel := range graph.Relation {
 			relData = append(relData, map[string]interface{}{
-				"source":       rel.Node1,
-				"target":       rel.Node2,
-				"knowledge_id": namespace.Knowledge,
-				"type":         rel.Type,
-				"labels":       []string{kbLabel},
+				"source":        rel.Node1,
+				"target":        rel.Node2,
+				"knowledge_id":  namespace.Knowledge,
+				"type":          rel.Type,
+				"source_labels": n.Labels(namespace),
+				"target_labels": n.Labels(namespace),
 			})
 		}
 		if _, err := tx.Run(ctx, rel_import_query, map[string]interface{}{"data": relData}); err != nil {
