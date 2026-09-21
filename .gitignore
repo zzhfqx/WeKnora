@@ -27,6 +27,9 @@ tmp/
 temp/
 logs/
 *.pid
+pid.*
+log.log
+log_frontend.log
 
 WeKnora
 WeKnora-lite

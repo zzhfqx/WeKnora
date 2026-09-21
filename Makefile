@@ -61,6 +61,20 @@ help:
 	@echo "                    已 make anydoc-lib 时自动链接 anydoc 引擎"
 	@echo "  dev-frontend      启动前端（本地运行，需先运行 dev-start）"
 	@echo ""
+	@echo "开发模式 - 后台运行（nohup，关闭终端不失效）:"
+	@echo "  dev-bg            一键启动基础设施 + 后端 + 前端（全部后台）"
+	@echo "  dev-bg-stop       一键停止全部后台服务"
+	@echo "  dev-app-bg        后台启动后端（日志: log.log）"
+	@echo "  dev-app-bg-stop   停止后端"
+	@echo "  dev-app-bg-restart 重启后端"
+	@echo "  dev-app-bg-status  查看后端状态"
+	@echo "  dev-app-bg-logs    实时查看后端日志"
+	@echo "  dev-frontend-bg        后台启动前端（日志: log_frontend.log）"
+	@echo "  dev-frontend-bg-stop   停止前端"
+	@echo "  dev-frontend-bg-restart 重启前端"
+	@echo "  dev-frontend-bg-status  查看前端状态"
+	@echo "  dev-frontend-bg-logs    实时查看前端日志"
+	@echo ""
 	@echo "Lite 模式（零外部依赖）:"
 	@echo "  build-lite        构建 Lite 版本（先构建前端到 web/，再构建 Go；SKIP_FRONTEND=1 跳过前端）"
 	@echo "  run-lite          构建并启动 Lite 版本"
@@ -348,5 +362,56 @@ dev-app:
 
 dev-frontend:
 	./scripts/dev.sh frontend
+
+# 后台运行模式（nohup + PID 文件）
+dev-app-bg:
+	./scripts/dev-app-nohup.sh start
+
+dev-app-bg-stop:
+	./scripts/dev-app-nohup.sh stop
+
+dev-app-bg-restart:
+	./scripts/dev-app-nohup.sh restart
+
+dev-app-bg-status:
+	./scripts/dev-app-nohup.sh status
+
+dev-app-bg-logs:
+	./scripts/dev-app-nohup.sh logs
+
+dev-frontend-bg:
+	./scripts/dev-frontend-nohup.sh start
+
+dev-frontend-bg-stop:
+	./scripts/dev-frontend-nohup.sh stop
+
+dev-frontend-bg-restart:
+	./scripts/dev-frontend-nohup.sh restart
+
+dev-frontend-bg-status:
+	./scripts/dev-frontend-nohup.sh status
+
+dev-frontend-bg-logs:
+	./scripts/dev-frontend-nohup.sh logs
+
+dev-bg: dev-start
+	@echo "启动基础设施完成，正在后台启动前后端..."
+	./scripts/dev-app-nohup.sh start
+	@echo ""
+	./scripts/dev-frontend-nohup.sh start
+	@echo ""
+	@echo "=================================================="
+	@echo "  全部服务已后台启动完成"
+	@echo "  后端: http://localhost:8082"
+	@echo "  前端: http://localhost:5173"
+	@echo "  后端日志: tail -f log.log"
+	@echo "  前端日志: tail -f log_frontend.log"
+	@echo "  停止: make dev-bg-stop"
+	@echo "=================================================="
+
+dev-bg-stop:
+	./scripts/dev-frontend-nohup.sh stop
+	./scripts/dev-app-nohup.sh stop
+	./scripts/dev.sh stop
 
 
