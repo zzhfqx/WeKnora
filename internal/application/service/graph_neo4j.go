@@ -65,7 +65,8 @@ func (s *Neo4jGraphService) GetEgoGraph(
 	if depth > neo4jGraphMaxDepth {
 		depth = neo4jGraphMaxDepth
 	}
-	if limit <= 0 {
+	// limit == 0 表示不截断（返回全部节点）；limit < 0 用默认值；limit > max 则裁剪
+	if limit < 0 {
 		limit = neo4jGraphDefaultLimit
 	}
 	if limit > neo4jGraphMaxLimit {

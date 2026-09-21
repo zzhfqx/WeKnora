@@ -507,7 +507,8 @@ func (n *Neo4jRepository) GetEgoGraph(
 					}
 				}
 
-				truncated := len(nodeList) > limit
+				// limit <= 0 表示不截断，返回全部节点
+				truncated := limit > 0 && len(nodeList) > limit
 				count := len(nodeList)
 				if truncated {
 					count = limit
@@ -536,7 +537,45 @@ func (n *Neo4jRepository) GetEgoGraph(
 					}
 				}
 
-				// Process relationships: resolve IDs to names, keep only if both ends in returned set
+				// Build adjacency from full subgraph relations for BFS depth calculation
+				allAdj := make(map[string][]string)
+				if relsVal, ok := record.Get("relationships"); ok {
+					if relList, ok := relsVal.([]interface{}); ok {
+						for _, r := range relList {
+							if rel, ok := r.(neo4j.Relationship); ok {
+								srcName := idToName[rel.StartElementId]
+								dstName := idToName[rel.EndElementId]
+								if srcName != "" && dstName != "" {
+									allAdj[srcName] = append(allAdj[srcName], dstName)
+									allAdj[dstName] = append(allAdj[dstName], srcName)
+								}
+							}
+						}
+					}
+				}
+
+				// BFS from center to compute shortest-hop depth for each node
+				depthMap := make(map[string]int)
+				bfsQueue := []string{centerNode}
+				depthMap[centerNode] = 0
+				for len(bfsQueue) > 0 {
+					cur := bfsQueue[0]
+					bfsQueue = bfsQueue[1:]
+					curDepth := depthMap[cur]
+					if curDepth >= depth {
+						continue
+					}
+					for _, neighbor := range allAdj[cur] {
+						if _, visited := depthMap[neighbor]; !visited {
+							depthMap[neighbor] = curDepth + 1
+							bfsQueue = append(bfsQueue, neighbor)
+						}
+					}
+				}
+
+				// Process relationships: keep only edges connecting adjacent BFS layers (depth diff == 1)
+				// This gives a "path tree" — no horizontal edges between same-hop nodes,
+				// only edges that lie on shortest paths from the center.
 				fixedRels := []types.Neo4jGraphRelation{}
 				if relsVal, ok := record.Get("relationships"); ok {
 					if relList, ok := relsVal.([]interface{}); ok {
@@ -545,11 +584,21 @@ func (n *Neo4jRepository) GetEgoGraph(
 								srcName := idToName[rel.StartElementId]
 								dstName := idToName[rel.EndElementId]
 								if srcName != "" && dstName != "" && nodeSet[srcName] && nodeSet[dstName] {
-									fixedRels = append(fixedRels, types.Neo4jGraphRelation{
-										Source: srcName,
-										Target: dstName,
-										Type:   rel.Type,
-									})
+									d1, ok1 := depthMap[srcName]
+									d2, ok2 := depthMap[dstName]
+									if ok1 && ok2 {
+										diff := d1 - d2
+										if diff < 0 {
+											diff = -diff
+										}
+										if diff == 1 {
+											fixedRels = append(fixedRels, types.Neo4jGraphRelation{
+												Source: srcName,
+												Target: dstName,
+												Type:   rel.Type,
+											})
+										}
+									}
 								}
 							}
 						}
@@ -605,15 +654,22 @@ func (n *Neo4jRepository) egoGraphFallback(
 	totalNodes int,
 	totalRels int,
 ) (*types.Neo4jGraphData, error) {
-	params := map[string]interface{}{"center": centerNode, "limit": limit}
+	params := map[string]interface{}{"center": centerNode}
+	if limit > 0 {
+		params["limit"] = limit
+	}
 
 	// Use variable-length paths
+	limitClause := ""
+	if limit > 0 {
+		limitClause = "LIMIT $limit"
+	}
 	query := `
 		MATCH path = (center:` + label + `{name: $center})-[*1..` + fmt.Sprintf("%d", depth) + `]-(n:` + label + `)
 		UNWIND nodes(path) AS nd
 		UNWIND relationships(path) AS rel
 		WITH collect(DISTINCT nd) AS uniqueNodes, collect(DISTINCT rel) AS uniqueRels
-		LIMIT $limit
+		` + limitClause + `
 		RETURN uniqueNodes, uniqueRels
 	`
 	// Note: for fallback mode, relation type filtering is not applied
@@ -673,7 +729,7 @@ func (n *Neo4jRepository) egoGraphFallback(
 			TotalNodes: totalNodes,
 			TotalRels:  totalRels,
 			Returned:   len(nodes),
-			Truncated:  len(nodes) >= limit,
+			Truncated:  limit > 0 && len(nodes) >= limit,
 			CenterNode: centerNode,
 			Depth:      depth,
 		},

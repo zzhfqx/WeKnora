@@ -106,9 +106,9 @@ func (h *GraphNeo4jHandler) GetNeo4jGraph(c *gin.Context) {
 	}
 
 	relTypes := parseRelTypes(c)
-	limit := parseLimit(c, 200, 1000)
 
 	if mode == "overview" {
+		limit := parseLimit(c, 200, 1000)
 		graph, err := h.neo4jGraphService.GetOverview(ctx, kbID, limit, relTypes)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -132,6 +132,16 @@ func (h *GraphNeo4jHandler) GetNeo4jGraph(c *gin.Context) {
 		}
 		if depth > 3 {
 			depth = 3
+		}
+		// ego 模式默认不截断（limit=0），传了 limit 就用传的值（上限 1000）
+		limit := 0
+		if v := c.Query("limit"); v != "" {
+			if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+				limit = parsed
+			}
+		}
+		if limit > 1000 {
+			limit = 1000
 		}
 		graph, err := h.neo4jGraphService.GetEgoGraph(ctx, kbID, center, depth, limit, relTypes)
 		if err != nil {

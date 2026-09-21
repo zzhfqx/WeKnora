@@ -16,7 +16,9 @@ const props = defineProps<{
 }>();
 
 // ===== Constants =====
-const GRAPH_LIMIT = 800;        // 默认加载 800 节点（尽量展示完整图谱）
+const GRAPH_LIMIT = 800;        // "显示全部"时加载的节点上限
+const OVERVIEW_DEFAULT_LIMIT = 400;  // 默认概览：中心节点 3 跳子图的节点上限
+const OVERVIEW_DEFAULT_DEPTH = 3;    // 默认概览：以最高度数节点为中心的跳数
 const MAX_REPULSION_DIST = 400;  // 更大的斥力范围，节点更分散
 const EDGE_TARGET_DIST = 120;   // 边更长，布局更舒展
 const SPRING_STRENGTH = 0.006;  // 弹簧更弱，斥力主导
@@ -135,14 +137,74 @@ const statsText = computed(() => {
 });
 
 function countVisibleEdges(): number {
+  // 直接用实际渲染的边数（去重后）
+  // 如果有模糊过滤，按 stroke-opacity 判断可见性
   let count = 0;
   for (const e of edgeEls) {
-    if (e.style.display !== "none") count++;
+    const opacity = e.getAttribute("stroke-opacity");
+    const display = e.style.display;
+    if (display !== "none" && (!opacity || parseFloat(opacity) > 0.1)) {
+      count++;
+    }
   }
-  return count;
+  return count > 0 ? count : graphEdges.length;
 }
 
-// ===== API: Load full graph =====
+// ===== API: Load overview graph (中心节点 3 跳子图) =====
+async function loadOverviewGraph() {
+  graphLoading.value = true;
+  graphReady.value = false;
+  isEgoMode.value = false; // 概览视觉风格（边淡化，hover 高亮）
+  hasActiveFilter.value = false;
+  activeCenterNode.value = "";
+  try {
+    // Step 1: 找度数最高的节点作为中心
+    let centerName = "";
+    try {
+      const res: any = await searchNeo4jNodes(props.knowledgeBaseId, "", 1);
+      const list = res?.data || res;
+      if (Array.isArray(list) && list.length > 0) {
+        centerName = list[0].name;
+      }
+    } catch (e) {
+      // 搜索失败不影响，降级为全量概览
+      console.warn("failed to find top node, fallback to overview", e);
+    }
+
+    let data: any;
+    if (centerName) {
+      // Step 2: 以最高度数节点为中心，加载 3 跳子图（上限 400 节点）
+      const res: any = await getNeo4jGraph(props.knowledgeBaseId, {
+        mode: "ego",
+        center: centerName,
+        depth: OVERVIEW_DEFAULT_DEPTH,
+        limit: OVERVIEW_DEFAULT_LIMIT,
+      });
+      data = res?.data || res;
+    } else {
+      // 空知识库或搜索失败，走概览模式
+      const res: any = await getNeo4jGraph(props.knowledgeBaseId, {
+        mode: "overview",
+        limit: OVERVIEW_DEFAULT_LIMIT,
+      });
+      data = res?.data || res;
+    }
+
+    graphData.value = data;
+    initGraphFromData(data);
+    await nextTick();
+    renderGraph();
+    clearHighlight();
+    startSimulation();
+  } catch (e: any) {
+    MessagePlugin.error(e?.message || "加载图谱失败");
+  } finally {
+    graphLoading.value = false;
+    graphReady.value = true;
+  }
+}
+
+// ===== API: Load full graph (显示全部：按度数 Top 800) =====
 async function loadFullGraph() {
   graphLoading.value = true;
   graphReady.value = false;
@@ -157,6 +219,7 @@ async function loadFullGraph() {
     initGraphFromData(data);
     await nextTick();
     renderGraph();
+    clearHighlight();
     startSimulation();
   } catch (e: any) {
     MessagePlugin.error(e?.message || "加载图谱失败");
@@ -209,15 +272,94 @@ function initGraphFromData(data: Neo4jGraphData) {
   const count = validNodes.length;
   maxDegreeInData = validNodes.reduce((m, n) => Math.max(m, n.degree), 1);
 
+  // ego 模式下：按跳数分层放射状布局，中心节点在中央
+  // 概览模式下：按度数分层环形布局
+  const egoCenter = isEgoMode.value && activeCenterNode.value ? activeCenterNode.value : null;
+  const hopDist = new Map<string, number>();
+  if (egoCenter) {
+    // BFS 计算每个节点到中心的跳数
+    hopDist.set(egoCenter, 0);
+    const queue: string[] = [egoCenter];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      const d = hopDist.get(cur)!;
+      // 注意：adjacency 还没构建，用 validNodes + relations 临时计算
+      // 先跳过，后面再赋值——我们在 adjacency 构建完后再算
+    }
+  }
+
+  // 先构建邻接表（需要用它来算 BFS 跳数）
+  const tempAdj = new Map<string, Set<string>>();
+  for (const node of validNodes) {
+    tempAdj.set(node.name, new Set());
+  }
+  data.relations.forEach((rel) => {
+    if (!tempAdj.has(rel.source) || !tempAdj.has(rel.target)) return;
+    if (rel.source === rel.target) return;
+    tempAdj.get(rel.source)!.add(rel.target);
+    tempAdj.get(rel.target)!.add(rel.source);
+  });
+
+  // ego 模式：BFS 计算跳数
+  if (egoCenter && tempAdj.has(egoCenter)) {
+    hopDist.set(egoCenter, 0);
+    const queue: string[] = [egoCenter];
+    while (queue.length > 0) {
+      const cur = queue.shift()!;
+      const d = hopDist.get(cur)!;
+      for (const nb of tempAdj.get(cur) || []) {
+        if (!hopDist.has(nb)) {
+          hopDist.set(nb, d + 1);
+          queue.push(nb);
+        }
+      }
+    }
+  }
+
   // 按度数降序排列，先放大节点
   const sortedNodes = [...validNodes].sort((a, b) => b.degree - a.degree);
 
-  sortedNodes.forEach((node, i) => {
-    const { color, tier } = getNodeTierInfo(node.degree);
-    const angle = (2 * Math.PI * i) / Math.max(count, 1);
-    const radiusRatio = tier === 0 ? 0.15 : tier === 1 ? 0.35 : tier === 2 ? 0.55 : tier === 3 ? 0.75 : 1.0;
-    const r = Math.min(svgWidth, svgHeight) * 0.38 * radiusRatio + (Math.random() - 0.5) * 40;
+  // 按跳数分组（ego 模式）或按 tier 分组（概览模式）
+  const groups = new Map<number, typeof sortedNodes>();
+  if (egoCenter) {
+    for (const node of sortedNodes) {
+      const d = hopDist.get(node.name) ?? 99;
+      if (!groups.has(d)) groups.set(d, []);
+      groups.get(d)!.push(node);
+    }
+  }
 
+  let placedIndex = 0;
+  sortedNodes.forEach((node) => {
+    const { color, tier } = getNodeTierInfo(node.degree);
+
+    let radiusRatio: number;
+    if (egoCenter) {
+      // ego 模式：按跳数分配圈层，每跳间距约 150px，方便分层观察
+      const d = hopDist.get(node.name) ?? 3;
+      // 直接用像素距离，绕过 0.38 系数
+      const radiusPx = d === 0 ? 0 : d === 1 ? 120 : d === 2 ? 280 : 440;
+      radiusRatio = radiusPx / (Math.min(svgWidth, svgHeight) * 0.38);
+    } else {
+      // 概览模式：按度数 tier 分配圈层
+      radiusRatio = tier === 0 ? 0.15 : tier === 1 ? 0.35 : tier === 2 ? 0.55 : tier === 3 ? 0.75 : 1.0;
+    }
+
+    // 同圈层内均匀分布
+    let angle: number;
+    if (egoCenter) {
+      const d = hopDist.get(node.name) ?? 99;
+      const group = groups.get(d) || [];
+      const idxInGroup = group.findIndex(n => n.name === node.name);
+      angle = (2 * Math.PI * idxInGroup) / Math.max(group.length, 1) + (d * 0.3); // 每层错开角度
+    } else {
+      angle = (2 * Math.PI * placedIndex) / Math.max(count, 1);
+    }
+    placedIndex++;
+
+    const r = Math.min(svgWidth, svgHeight) * 0.38 * radiusRatio + (Math.random() - 0.5) * 30;
+
+    const isCenter = egoCenter && node.name === egoCenter;
     const gNode: GNode = {
       x: centerX + r * Math.cos(angle),
       y: centerY + r * Math.sin(angle),
@@ -225,7 +367,7 @@ function initGraphFromData(data: Neo4jGraphData) {
       vy: 0,
       name: node.name,
       degree: node.degree,
-      pinned: false,
+      pinned: isCenter, // ego 模式中心节点固定不动
       color,
       tier,
       visible: true,
@@ -510,6 +652,9 @@ function tick() {
   }
 
   // 2. Spring attraction（叶子节点的边更长，让它往外圈跑）
+  // ego 模式下弹簧更弱，节点更舒展，圈层更明显
+  const egoMul = isEgoMode.value ? 1.4 : 1.0; // ego 模式边距放大
+  const springEgoMul = isEgoMode.value ? 0.5 : 1.0; // ego 模式弹簧减弱
   for (const edge of graphEdges) {
     const src = nameToNode.get(edge.source);
     const tgt = nameToNode.get(edge.target);
@@ -519,8 +664,10 @@ function tick() {
     const dist = Math.sqrt(dx * dx + dy * dy) || 0.1;
     // 叶子节点（degree=1）的目标边距增大 60%，防止挤在中心附近
     const isLeafEdge = src.degree <= 1 || tgt.degree <= 1;
-    const targetDist = isLeafEdge ? EDGE_TARGET_DIST * 1.6 : EDGE_TARGET_DIST;
-    const springStrength = isLeafEdge ? SPRING_STRENGTH * 0.7 : SPRING_STRENGTH;
+    let targetDist = isLeafEdge ? EDGE_TARGET_DIST * 1.6 : EDGE_TARGET_DIST;
+    targetDist *= egoMul;
+    let springStrength = isLeafEdge ? SPRING_STRENGTH * 0.7 : SPRING_STRENGTH;
+    springStrength *= springEgoMul;
     const displacement = (dist - targetDist) * springStrength * graphAlpha;
     const fx = (dx / dist) * displacement;
     const fy = (dy / dist) * displacement;
@@ -529,7 +676,11 @@ function tick() {
   }
 
   // 3. Center gravity
-  const gravity = Math.min(0.008, 0.0008 + graphNodes.filter(n => n.visible).length * 0.000015) * graphAlpha;
+  // ego 模式下重力减弱，让节点保持圈层结构，不被拉回中心
+  const gravityBase = isEgoMode.value
+    ? Math.min(0.003, 0.0003 + graphNodes.filter(n => n.visible).length * 0.000008)
+    : Math.min(0.008, 0.0008 + graphNodes.filter(n => n.visible).length * 0.000015);
+  const gravity = gravityBase * graphAlpha;
   for (const node of graphNodes) {
     if (node.pinned || !node.visible) continue;
     node.vx += (centerX - node.x) * gravity;
@@ -774,7 +925,9 @@ function applyHighlight(primaryName: string, secondaryName?: string) {
   // ego 模式下不淡化非邻居节点，全部保持清晰
   const dimOtherNodes = !isEgoMode.value;
   const otherNodeOpacity = dimOtherNodes ? "0.2" : "1";
-  const otherEdgeOpacity = dimOtherNodes ? "0.08" : "0.85";
+  const otherEdgeOpacity = dimOtherNodes ? "0.08" : "0.9";
+  const otherEdgeColor = isEgoMode.value ? "#909399" : EDGE_COLOR;
+  const otherEdgeWidth = dimOtherNodes ? "1" : "1.5";
 
   for (const [name, el] of nameToEl) {
     const node = nameToNode.get(name);
@@ -824,8 +977,8 @@ function applyHighlight(primaryName: string, secondaryName?: string) {
       line.setAttribute("marker-end", "url(#arrow-end-hl)");
       if (isBidir) line.setAttribute("marker-start", "url(#arrow-start-hl)");
     } else {
-      line.setAttribute("stroke", EDGE_COLOR);
-      line.setAttribute("stroke-width", dimOtherNodes ? "1" : "1.3");
+      line.setAttribute("stroke", otherEdgeColor);
+      line.setAttribute("stroke-width", otherEdgeWidth);
       line.setAttribute("stroke-opacity", otherEdgeOpacity);
       line.setAttribute("marker-end", "url(#arrow-end)");
       if (isBidir) line.setAttribute("marker-start", "url(#arrow-start)");
@@ -847,8 +1000,9 @@ function applyHighlight(primaryName: string, secondaryName?: string) {
 function clearHighlight() {
   // ego 模式下：所有节点和边都清晰可见（不淡化），因为都是 N 跳内的
   // 概览模式下：边用淡色（Wiki 风格）
-  const edgeOpacity = isEgoMode.value ? "0.85" : "0.4";
-  const edgeWidth = isEgoMode.value ? "1.3" : "1.2";
+  const edgeOpacity = isEgoMode.value ? "0.9" : "0.4";
+  const edgeWidth = isEgoMode.value ? "1.5" : "1.2";
+  const edgeColor = isEgoMode.value ? "#909399" : EDGE_COLOR; // ego 模式用深一点的灰色
 
   for (const [name, el] of nameToEl) {
     const node = nameToNode.get(name);
@@ -865,7 +1019,7 @@ function clearHighlight() {
   }
   updateLabelsVisibility();
   for (const line of edgeEls) {
-    line.setAttribute("stroke", EDGE_COLOR);
+    line.setAttribute("stroke", edgeColor);
     line.setAttribute("stroke-width", edgeWidth);
     line.setAttribute("stroke-opacity", edgeOpacity);
     line.setAttribute("marker-end", "url(#arrow-end)");
@@ -1080,13 +1234,46 @@ async function loadEgoGraph(centerName: string, depth: number) {
       mode: "ego",
       center: centerName,
       depth,
-      limit: 500,
+      // 不传 limit → 后端默认不截断，返回完整的 N 跳子图
     });
     const data = res?.data || res;
     graphData.value = data;
     initGraphFromData(data);
+
+    // ===== DEBUG: 验证返回节点的跳数是否正确 =====
+    if (data?.nodes && data?.relations) {
+      const adj = new Map<string, string[]>();
+      for (const n of data.nodes) {
+        adj.set(n.name, []);
+      }
+      for (const r of data.relations) {
+        adj.get(r.source)?.push(r.target);
+        adj.get(r.target)?.push(r.source);
+      }
+      const dist = new Map<string, number>();
+      dist.set(centerName, 0);
+      const queue: string[] = [centerName];
+      while (queue.length > 0) {
+        const cur = queue.shift()!;
+        const d = dist.get(cur)!;
+        for (const nb of (adj.get(cur) || [])) {
+          if (!dist.has(nb)) {
+            dist.set(nb, d + 1);
+            queue.push(nb);
+          }
+        }
+      }
+      const maxDist = Math.max(...Array.from(dist.values()), 0);
+      const overNodes = data.nodes.filter((n: any) => (dist.get(n.name) ?? -1) > depth);
+      console.log(`[ego debug] center="${centerName}", depth=${depth}, nodes=${data.nodes.length}, maxDist=${maxDist}, overDepth=${overNodes.length}`);
+      if (overNodes.length > 0) {
+        console.warn("[ego debug] 超出跳数的节点:", overNodes.slice(0, 10));
+      }
+    }
+
     await nextTick();
     renderGraph();
+    clearHighlight(); // 应用 ego 模式的边样式（统一清晰显示，而非概览的淡化样式）
     startSimulation();
 
     // 标记中心节点（激活环）+ 打开详情抽屉
@@ -1114,6 +1301,7 @@ function setActiveCenter(name: string) {
   activeCenterNode.value = name;
   hasActiveFilter.value = true;
   hasFuzzyFilter.value = false;
+  searchValue.value = name; // 同步搜索框显示
   clearHighlight();
   loadEgoGraph(name, hopCount.value);
 }
@@ -1238,7 +1426,7 @@ function setupSvg() {
 onMounted(async () => {
   setupSvg();
   await nextTick();
-  loadFullGraph();
+  loadOverviewGraph();
 });
 
 onUnmounted(() => {
