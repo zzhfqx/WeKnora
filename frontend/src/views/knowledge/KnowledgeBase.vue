@@ -1605,19 +1605,56 @@ const uploadConfirmStore = useUploadConfirmStore();
 const getFolderUploadFileName = (file: File, targetFolder: string) =>
   buildUploadFileName(file, targetFolder);
 
+// 解析上传失败原因，返回用户友好的中文提示
+const getUploadFailureReason = (error: any, responseData: any): string => {
+  // 重复文件
+  if (responseData?.code === 'duplicate_file' || responseData?.error?.code === 'duplicate_file' || error?.code === 'duplicate_file') {
+    return '文件已存在';
+  }
+  // 超时
+  if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout') || error?.message?.includes('超时')) {
+    return '上传超时（文件太大或网络较慢，请检查网络后重试）';
+  }
+  // 网络错误
+  if (error?.code === 'ERR_NETWORK' || error?.message?.includes('Network Error') || error?.message?.includes('网络错误')) {
+    return '网络错误，请检查网络连接';
+  }
+  // 后端返回的具体错误信息
+  if (responseData?.error?.message) {
+    return responseData.error.message;
+  }
+  if (responseData?.message) {
+    return responseData.message;
+  }
+  if (error?.message) {
+    return error.message;
+  }
+  return '上传失败';
+};
+
 const showUploadResultMessages = (
   successCount: number,
   failCount: number,
   totalCount: number,
   mode: 'document' | 'folder',
+  failedFiles?: { name: string; size: string; reason: string }[],
 ) => {
+  // 构建失败文件列表提示（最多显示5个，多了省略）
+  const buildFailedFileList = () => {
+    if (!failedFiles || failedFiles.length === 0) return '';
+    const showList = failedFiles.slice(0, 5);
+    const listText = showList.map(f => `  · ${f.name}（${f.size}）- ${f.reason}`).join('\n');
+    const moreText = failedFiles.length > 5 ? `\n  ... 还有 ${failedFiles.length - 5} 个文件` : '';
+    return `\n失败详情：\n${listText}${moreText}`;
+  };
+
   if (mode === 'folder') {
     if (failCount === 0) {
       MessagePlugin.success(t('knowledgeBase.uploadAllSuccess', { count: successCount }));
     } else if (successCount > 0) {
-      MessagePlugin.warning(t('knowledgeBase.uploadPartialSuccess', { success: successCount, fail: failCount }));
+      MessagePlugin.warning(t('knowledgeBase.uploadPartialSuccess', { success: successCount, fail: failCount }) + buildFailedFileList());
     } else {
-      MessagePlugin.error(t('knowledgeBase.uploadAllFailed'));
+      MessagePlugin.error(t('knowledgeBase.uploadAllFailed') + buildFailedFileList());
     }
     return;
   }
@@ -1632,9 +1669,9 @@ const showUploadResultMessages = (
   if (failCount === 0) {
     MessagePlugin.success(t('knowledgeBase.allUploadSuccess', { count: successCount }));
   } else if (successCount > 0) {
-    MessagePlugin.warning(t('knowledgeBase.partialUploadSuccess', { success: successCount, fail: failCount }));
+    MessagePlugin.warning(t('knowledgeBase.partialUploadSuccess', { success: successCount, fail: failCount }) + buildFailedFileList());
   } else {
-    MessagePlugin.error(t('knowledgeBase.allUploadFailed', { count: failCount }));
+    MessagePlugin.error(t('knowledgeBase.allUploadFailed', { count: failCount }) + buildFailedFileList());
   }
 };
 
@@ -1659,6 +1696,15 @@ const executeUploadBatch = async (
   let failCount = 0;
   const totalCount = files.length;
   const hasFolderPaths = files.some(isFolderUpload);
+  // 收集失败文件信息，用于提示
+  const failedFiles: { name: string; size: string; reason: string }[] = [];
+
+  // 格式化文件大小
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  };
 
   for (const file of files) {
     try {
@@ -1670,6 +1716,7 @@ const executeUploadBatch = async (
       } = { file, tag_ids: tagIdsToUpload };
 
       const fileName = getFolderUploadFileName(file, options.targetFolder || ROOT_FOLDER_PATH);
+      const displayName = fileName || file.name;
       if (fileName) uploadData.fileName = fileName;
       if (options.processConfig) {
         uploadData.process_config = options.processConfig;
@@ -1681,27 +1728,19 @@ const executeUploadBatch = async (
         successCount++;
       } else {
         failCount++;
+        const reason = getUploadFailureReason(null, responseData);
+        failedFiles.push({ name: displayName, size: formatFileSize(file.size), reason });
         if (totalCount === 1) {
-          let errorMessage = t('knowledgeBase.uploadFailed');
-          if (responseData?.error?.message) {
-            errorMessage = responseData.error.message;
-          } else if (responseData?.message) {
-            errorMessage = responseData.message;
-          }
-          if (responseData?.code === 'duplicate_file' || responseData?.error?.code === 'duplicate_file') {
-            errorMessage = t('knowledgeBase.fileExists');
-          }
-          MessagePlugin.error(errorMessage);
+          MessagePlugin.error(reason);
         }
       }
     } catch (error: any) {
       failCount++;
+      const displayName = getFolderUploadFileName(file, options.targetFolder || ROOT_FOLDER_PATH) || file.name;
+      const reason = getUploadFailureReason(error, null);
+      failedFiles.push({ name: displayName, size: formatFileSize(file.size), reason });
       if (totalCount === 1) {
-        let errorMessage = error?.error?.message || error?.message || t('knowledgeBase.uploadFailed');
-        if (error?.code === 'duplicate_file') {
-          errorMessage = t('knowledgeBase.fileExists');
-        }
-        MessagePlugin.error(errorMessage);
+        MessagePlugin.error(reason);
       }
     }
   }
@@ -1712,7 +1751,7 @@ const executeUploadBatch = async (
     }));
   }
 
-  showUploadResultMessages(successCount, failCount, totalCount, hasFolderPaths ? 'folder' : 'document');
+  showUploadResultMessages(successCount, failCount, totalCount, hasFolderPaths ? 'folder' : 'document', failedFiles);
   return { successCount, failCount };
 };
 

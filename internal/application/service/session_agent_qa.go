@@ -14,17 +14,17 @@ import (
 	"github.com/Tencent/WeKnora/internal/types"
 )
 
-// AgentQA performs agent-based question answering with conversation history and streaming support
-// customAgent is optional - if provided, uses custom agent configuration instead of tenant defaults
-// summaryModelID is optional - if provided, overrides the model from customAgent config
+// AgentQA 执行基于智能体的问答，支持对话历史和流式输出。
+// customAgent 为可选参数——若提供则使用自定义智能体配置，而非租户默认配置。
+// summaryModelID 为可选参数——若提供则覆盖自定义智能体配置中的模型设置。
 func (s *sessionService) AgentQA(
 	ctx context.Context,
 	req *types.QARequest,
 	eventBus *event.EventBus,
 ) error {
 	sessionID := req.Session.ID
-	// Propagate the session ID so stateful sandbox backends (CubeSandbox) can
-	// bind script execution to a per-session MicroVM instance.
+	// 将会话 ID 写入上下文，以便有状态的沙箱后端（如 CubeSandbox）
+	// 能够将脚本执行绑定到每个会话对应的 MicroVM 实例上。
 	ctx = types.WithSessionID(ctx, sessionID)
 	sessionJSON, err := json.Marshal(req.Session)
 	if err != nil {
@@ -32,13 +32,13 @@ func (s *sessionService) AgentQA(
 		return fmt.Errorf("failed to marshal session: %w", err)
 	}
 
-	// customAgent is required for AgentQA (handler has already done permission check for shared agent)
+	// AgentQA 必须提供 customAgent（处理器层已对共享智能体做过权限校验）
 	if req.CustomAgent == nil {
 		logger.Warnf(ctx, "Custom agent not provided for session: %s", sessionID)
 		return errors.New("custom agent configuration is required for agent QA")
 	}
 
-	// Resolve retrieval tenant using shared helper
+	// 使用通用辅助方法解析检索所属的租户
 	agentTenantID := s.resolveRetrievalTenantID(ctx, req)
 	logger.Infof(ctx, "Start agent-based question answering, session ID: %s, agent tenant ID: %d, query: %s, session: %s",
 		sessionID, agentTenantID, req.Query, string(sessionJSON))
@@ -47,7 +47,8 @@ func (s *sessionService) AgentQA(
 	if v := ctx.Value(types.TenantInfoContextKey); v != nil {
 		tenantInfo, _ = v.(*types.Tenant)
 	}
-	// When agent belongs to another tenant (shared agent), use agent's tenant for KB/model scope; load tenantInfo if needed
+	// 当智能体属于另一个租户（共享智能体）时，使用智能体所在租户作为知识库/模型的作用域；
+	// 如有需要则加载该租户的信息
 	if tenantInfo == nil || tenantInfo.ID != agentTenantID {
 		if s.tenantService != nil {
 			if agentTenant, err := s.tenantService.GetTenantByID(ctx, agentTenantID); err == nil && agentTenant != nil {
@@ -61,21 +62,21 @@ func (s *sessionService) AgentQA(
 		tenantInfo = &types.Tenant{ID: agentTenantID}
 	}
 
-	// Ensure defaults are set
+	// 确保默认值已填充
 	req.CustomAgent.EnsureDefaults()
 
-	// Build AgentConfig from custom agent and tenant info
+	// 根据自定义智能体和租户信息构建 AgentConfig
 	agentConfig, err := s.buildAgentConfig(ctx, req, tenantInfo, agentTenantID)
 	if err != nil {
 		return err
 	}
 
-	// Set VLM model ID for tool result image analysis (runtime-only field)
+	// 设置用于工具结果图片分析的 VLM 模型 ID（仅运行时使用的字段）
 	if req.CustomAgent != nil && req.CustomAgent.Config.VLMModelID != "" {
 		agentConfig.VLMModelID = req.CustomAgent.Config.VLMModelID
 	}
 
-	// Resolve model ID using shared helper (AgentQA requires a model, so error if not found)
+	// 使用通用辅助方法解析模型 ID（AgentQA 必须有模型，找不到则报错）
 	effectiveModelID, err := s.resolveChatModelID(ctx, req, agentConfig.KnowledgeBases, agentConfig.KnowledgeIDs)
 	if err != nil {
 		return err
@@ -91,10 +92,10 @@ func (s *sessionService) AgentQA(
 		return fmt.Errorf("failed to get chat model: %w", err)
 	}
 
-	// The model's own metadata decides two things the agent cannot guess: how
-	// much history fits before compaction, and whether images can be passed
-	// through. Resolve it once, before the engine is built — the engine sizes
-	// its memory consolidator from MaxContextTokens at construction.
+	// 模型自身的元数据决定了两件智能体无法自行推断的事情：
+	// 压缩前能容纳多少历史对话，以及是否支持透传图片。
+	// 在构建引擎前先解析一次——引擎在构造时会根据 MaxContextTokens
+	// 来设置其内存合并器的容量。
 	var agentModelSupportsVision bool
 	modelContextWindow := 0
 	if effectiveModelID != "" {
@@ -109,20 +110,18 @@ func (s *sessionService) AgentQA(
 	logger.Infof(ctx, "Agent context window: %d tokens (model %s declares %d)",
 		agentConfig.MaxContextTokens, effectiveModelID, modelContextWindow)
 
-	// Get rerank model from custom agent config only when knowledge_search can
-	// actually run. A disabled KB scope makes all KB tools ineffective, so it
-	// must not force users to configure an otherwise-unused rerank model.
+	// 仅当 knowledge_search 实际可用时才从自定义智能体配置中获取重排序模型。
+	// 如果知识库作用域被禁用，所有知识库工具都不会生效，
+	// 因此不应强制用户去配置一个根本用不到的重排序模型。
 	var rerankModel rerank.Reranker
 	if agentRequiresRerankModel(req.CustomAgent) {
-		// Rerank model is resolved purely from the agent config now.
-		// We used to fall back to ConversationConfig.RerankModelID at
-		// the tenant level, but that path encouraged "leave rerank
-		// blank on the agent and inherit silently" which made debugging
-		// retrieval quality a guessing game across tenant settings vs
-		// agent settings. Forcing the agent to declare its own rerank
-		// model puts the configuration where the user actually edits
-		// the agent. If a Wiki-only agent doesn't need reranking,
-		// agentRequiresRerankModel() below already lets it pass.
+		// 重排序模型现在仅从智能体配置中解析。
+		// 之前我们会回退到租户级别的 ConversationConfig.RerankModelID，
+		// 但这种做法会导致"智能体上留空，静默继承租户配置"的情况，
+		// 使得排查检索质量问题时需要在租户配置和智能体配置之间反复猜测。
+		// 强制智能体声明自己的重排序模型，可以让配置集中在用户实际编辑智能体的地方。
+		// 如果一个纯 Wiki 智能体不需要重排序，
+		// agentRequiresRerankModel() 已经会直接放行。
 		rerankModelID := req.CustomAgent.Config.RerankModelID
 		if rerankModelID == "" {
 			logger.Warnf(ctx, "No rerank model configured for custom agent %s, but knowledge_search tool is enabled", req.CustomAgent.ID)
@@ -138,11 +137,10 @@ func (s *sessionService) AgentQA(
 		logger.Infof(ctx, "knowledge_search is unavailable for the effective agent scope, skipping rerank model initialization")
 	}
 
-	// Load multi-turn history directly from DB (the single source of truth).
-	// AgentSteps on each historical assistant message are expanded into proper
-	// assistant_with_tool_calls + tool messages so the model can see what was
-	// tried last turn — except final_answer, which is replayed as the trailing
-	// canonical assistant message.
+	// 直接从数据库加载多轮对话历史（数据库是唯一可信来源）。
+	// 每条历史助手消息上的 AgentSteps 会被展开为标准的
+	// assistant_with_tool_calls + tool 消息，让模型能看到上一轮尝试过什么——
+	// 但 final_answer 除外，它会作为末尾的正式助手消息重放。
 	var llmContext []chat.Message
 	if agentConfig.MultiTurnEnabled {
 		historyTurns := agentConfig.HistoryTurns
@@ -160,26 +158,24 @@ func (s *sessionService) AgentQA(
 		llmContext = []chat.Message{}
 	}
 
-	// Hold the sandbox across this turn so an install that finishes while we
-	// are running cannot rebuild the VM between tool calls. Staging below is
-	// the first resolve: if the previous turn left a stale mark, that is
-	// where the new image is picked up.
+	// 在本轮对话期间持有沙箱，避免在工具调用之间因为安装完成而重建 VM。
+	// 下方的暂存操作是第一次解析：如果上一轮留下了过期标记，
+	// 就在此处加载新的镜像。
 	releaseTurn := s.holdSandboxTurn(ctx, sessionID, agentConfig.SandboxConfigID)
 	defer releaseTurn()
 
-	// Reconcile all durable session attachments into the session's remote
-	// sandbox before the model can request shell or skill execution. The
-	// durable storage URL — not the ephemeral sandbox path — remains the
-	// source of truth. Gated on the sandbox manager advertising a session
-	// filesystem capability so provider-neutral remote wiring stays here.
+	// 在模型请求执行 shell 或技能之前，将所有持久化的会话附件同步到
+	// 会话的远程沙箱中。持久化存储的 URL（而非临时的沙箱路径）
+	// 仍然是数据的可信来源。仅在沙箱管理器声明支持会话文件系统能力时才执行，
+	// 以便与具体提供商无关的远程装配逻辑保留在此处。
 	var stagedAttachments []stagedSessionAttachment
 	stager, ok := s.agentService.(sessionAttachmentStager)
 	if !ok {
 		return errors.New("agent service does not support session attachment staging")
 	}
-	// Probe the backend this session's sandbox actually runs on. Gating on the
-	// process-wide manager instead could inspect a different backend than the
-	// named workspace config selected by this agent.
+	// 探测当前会话沙箱实际运行的后端。
+	// 如果基于进程全局的管理器来判断，可能检查到的后端并非
+	// 该智能体所选工作区配置对应的那个后端。
 	inputStore, storeErr := stager.sessionSandboxInputStore(ctx, sessionID, agentConfig.SandboxConfigID)
 	if storeErr != nil {
 		return fmt.Errorf("resolve sandbox file store for session %s: %w", sessionID, storeErr)
@@ -195,7 +191,7 @@ func (s *sessionService) AgentQA(
 		}
 	}
 
-	// Create agent engine with EventBus
+	// 创建带 EventBus 的智能体引擎
 	logger.Info(ctx, "Creating agent engine")
 	engine, err := s.agentService.CreateAgentEngine(
 		ctx,
@@ -211,8 +207,8 @@ func (s *sessionService) AgentQA(
 		return err
 	}
 
-	// Recall long-term memory for this turn. Like the RAG path this is a
-	// no-model read, and an agent may opt out of it entirely.
+	// 为本轮对话召回长期记忆。与 RAG 路径类似，这是一次不经过模型的读取，
+	// 智能体也可以完全选择不启用该功能。
 	memoryCtx := types.ApplyAgentMemoryPreference(ctx, agentConfig.MemoryEnabled)
 	if s.memoryService != nil {
 		recall := s.memoryService.Recall(memoryCtx, req.Query)
@@ -242,9 +238,8 @@ func (s *sessionService) AgentQA(
 	if req.QuotedContext != "" {
 		agentQuery += "\n\n" + req.QuotedContext
 	}
-	// Inject attachment content (documents, audio transcripts, etc.) so the agent
-	// can see uploaded files. Mirrors the behavior of the KnowledgeQA pipeline
-	// (see chat_pipeline/into_chat_message.go).
+	// 注入附件内容（文档、音频转写文本等），让智能体能看到上传的文件。
+	// 此逻辑与 KnowledgeQA 流水线保持一致（参见 chat_pipeline/into_chat_message.go）。
 	if len(req.Attachments) > 0 {
 		agentQuery += req.Attachments.BuildPrompt()
 		logger.Infof(ctx, "Appended %d attachment(s) to agent query", len(req.Attachments))
@@ -254,16 +249,16 @@ func (s *sessionService) AgentQA(
 		logger.Infof(ctx, "Appended %d staged sandbox attachment path(s) to agent query", len(stagedAttachments))
 	}
 
-	// Scope envelopes (runtime_context / must_use) are injected per LLM call inside
-	// the agent engine only; we intentionally do not persist them on user messages
-	// so multi-turn history stays clean and is not skewed by stale @mention scope.
+	// 作用域封装（runtime_context / must_use）仅在智能体引擎内部的
+	// 每次 LLM 调用时注入；我们有意不将它们持久化到用户消息中，
+	// 这样多轮历史才能保持干净，不会被过期的 @提及作用域干扰。
 
-	// Execute agent with streaming (asynchronously)
-	// Events will be emitted to EventBus and handled by the Handler layer
+	// 以流式方式异步执行智能体
+	// 事件将被发送到 EventBus，并由 Handler 层处理
 	logger.Info(ctx, "Executing agent with streaming")
 	if _, err := engine.Execute(ctx, sessionID, req.AssistantMessageID, agentQuery, llmContext, agentImageURLs); err != nil {
 		logger.Errorf(ctx, "Agent execution failed: %v", err)
-		// Emit error event to the EventBus used by this agent
+		// 向该智能体使用的 EventBus 发送错误事件
 		eventBus.Emit(ctx, event.Event{
 			Type:      event.EventError,
 			SessionID: sessionID,
@@ -274,12 +269,12 @@ func (s *sessionService) AgentQA(
 			},
 		})
 	}
-	// Return empty - events will be handled by Handler via EventBus subscription
+	// 返回空值——事件将由 Handler 通过 EventBus 订阅来处理
 	return nil
 }
 
-// buildAgentConfig creates a runtime AgentConfig from the QARequest's custom agent configuration,
-// tenant info, and resolved knowledge bases / search targets.
+// buildAgentConfig 根据 QARequest 中的自定义智能体配置、租户信息，
+// 以及已解析的知识库/搜索目标，构建运行时的 AgentConfig。
 func (s *sessionService) buildAgentConfig(
 	ctx context.Context,
 	req *types.QARequest,

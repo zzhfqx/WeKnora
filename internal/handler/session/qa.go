@@ -844,15 +844,15 @@ func (h *Handler) KnowledgeQA(c *gin.Context) {
 // @Security     ApiKeyAuth
 // @Router       /agent-chat/{session_id} [post]
 func (h *Handler) AgentQA(c *gin.Context) {
-	// Parse and validate request
+	// 解析并校验请求参数
 	reqCtx, request, err := h.parseQARequest(c, "AgentQA")
 	if err != nil {
 		c.Error(err)
 		return
 	}
 
-	// Determine if agent mode should be enabled
-	// Priority: customAgent.IsAgentMode() > request.AgentEnabled
+	// 判断是否启用智能体模式
+	// 优先级：customAgent.IsAgentMode() > request.AgentEnabled
 	agentModeEnabled := request.AgentEnabled
 	if reqCtx.customAgent != nil {
 		agentModeEnabled = reqCtx.customAgent.IsAgentMode()
@@ -860,16 +860,14 @@ func (h *Handler) AgentQA(c *gin.Context) {
 			agentModeEnabled, reqCtx.customAgent.Config.AgentMode)
 	}
 
-	// Sanity gate: agent mode requires a resolved CustomAgent. If we got
-	// here with agent_enabled=true but agent_id missing/unresolvable, the
-	// AgentQA service will fail deep inside the async goroutine with a
-	// generic "custom agent configuration is required" error and the user
-	// just sees a broken stream. Reject early with a clear 400 so the
-	// frontend can recover (e.g. fall back to quick-answer). Most likely
-	// cause is a stale localStorage settings blob where selectedAgentId
-	// got blanked but isAgentEnabled stayed true — usually after a
-	// cross-tenant switch where the previously selected agent is no
-	// longer visible.
+	// 前置校验：智能体模式必须能解析到对应的 CustomAgent。
+	// 如果传入 agent_enabled=true 但 agent_id 缺失或无法解析，
+	// AgentQA 服务会在异步 goroutine 深处报出笼统的
+	// "custom agent configuration is required" 错误，用户只能看到一个中断的流。
+	// 在这里提前返回明确的 400 错误，方便前端处理（例如回退到快速回答）。
+	// 最常见的原因是 localStorage 中缓存的设置过期，
+	// selectedAgentId 被清空但 isAgentEnabled 仍然为 true ——
+	// 通常发生在跨租户切换后，之前选中的智能体在当前租户下不再可见。
 	if agentModeEnabled && reqCtx.customAgent == nil {
 		logger.Warnf(reqCtx.ctx,
 			"Agent mode requested without a resolvable agent_id, rejecting; session=%s, request.AgentID=%q",
@@ -879,7 +877,7 @@ func (h *Handler) AgentQA(c *gin.Context) {
 		return
 	}
 
-	// Route to appropriate handler based on agent mode
+	// 根据智能体模式选择相应的处理路径
 	if agentModeEnabled {
 		h.executeQA(reqCtx, qaModeAgent, true)
 	} else {

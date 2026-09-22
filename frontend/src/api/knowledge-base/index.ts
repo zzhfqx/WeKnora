@@ -227,7 +227,7 @@ export function uploadKnowledgeFile(
       formData.append(key, value);
     }
   });
-  return postUpload(`/api/v1/knowledge-bases/${kbId}/knowledge/file`, formData, onProgress);
+  return postUpload(`/api/v1/knowledge-bases/${kbId}/knowledge/file`, formData, onProgress, { timeout: 300000 }); // 上传超时5分钟，支持大文件
 }
 
 // 从URL创建知识

@@ -25,8 +25,9 @@ FRONTEND_DIR="$PROJECT_ROOT/frontend"
 PID_FILE="$PROJECT_ROOT/pid.frontend"
 LOG_FILE="$PROJECT_ROOT/log_frontend.log"
 
-# 前端端口
-FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+# 前端端口（开发模式 Vite 默认 5173）
+# 注意：不使用 .env 中的 FRONTEND_PORT，那个是生产模式 Docker 用的
+FRONTEND_PORT="${DEV_FRONTEND_PORT:-5173}"
 
 log_info() {
     printf "%b\n" "${BLUE}[INFO]${NC} $1"

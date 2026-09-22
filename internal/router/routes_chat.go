@@ -98,24 +98,24 @@ func RegisterSessionRoutes(
 	}
 }
 
-// RegisterChatRoutes 注册路由。Chat endpoints are tenant-member usage
-// surfaces; Viewer+ is sufficient because per-session/per-agent
-// authorisation is enforced inside the handlers.
+// RegisterChatRoutes 注册聊天相关路由。聊天接口面向租户成员使用，
+// Viewer 及以上角色即可访问，会话级/智能体级的权限校验在处理器内部完成。
 func RegisterChatRoutes(r *gin.RouterGroup, handler *session.Handler, g *rbacGuards) {
-	// These POST routes append messages and run generation, so a scoped key
-	// needs the explicit chat capability unless it has full tenant access.
+	// 这些 POST 路由会追加消息并触发生成，因此作用域受限的 API Key
+	// 需要显式具备 chat 能力，除非它拥有完整的租户访问权限。
+	// 普通 RAG 模式，不走 Agent
 	knowledgeChat := g.apiKeyGroup(r.Group("/knowledge-chat", g.Viewer()), apiKeyChat(apiKeyFullAccess()))
 	{
 		knowledgeChat.POST("/:session_id", handler.KnowledgeQA)
 	}
 
-	// Agent-based chat
+	// 基于智能体的聊天
 	agentChat := g.apiKeyGroup(r.Group("/agent-chat", g.Viewer()), apiKeyChat(apiKeyFullAccess()))
 	{
 		agentChat.POST("/:session_id", handler.AgentQA)
 	}
 
-	// 新增知识检索接口，不需要session_id
+	// 知识检索接口，不需要 session_id，也就是不需要LLM
 	knowledgeSearch := g.apiKeyGroup(r.Group("/knowledge-search", g.Viewer()), apiKeyRetrieve(apiKeyFullAccess()))
 	{
 		knowledgeSearch.POST("", handler.SearchKnowledge)

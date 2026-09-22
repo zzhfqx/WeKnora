@@ -24,8 +24,22 @@ PROJECT_ROOT="$( cd "$SCRIPT_DIR/.." && pwd )"
 PID_FILE="$PROJECT_ROOT/pid.app"
 LOG_FILE="$PROJECT_ROOT/log.log"
 
-# 后端端口（用于检测占用）
-APP_PORT="${APP_PORT:-8082}"
+# 后端端口（开发模式默认 8082，从 config/config.yaml 读取，读不到则用 8082）
+# 注意：不使用 .env 中的 APP_PORT，那个是生产模式 Docker 用的
+detect_app_port() {
+    local config_file="$PROJECT_ROOT/config/config.yaml"
+    if [ -f "$config_file" ]; then
+        # 从 yaml 中读取 server.port，兼容不同缩进
+        local port
+        port=$(grep -A5 '^server:' "$config_file" | grep 'port:' | head -1 | awk '{print $2}' | tr -d ' ')
+        if [ -n "$port" ] && [ "$port" -eq "$port" ] 2>/dev/null; then
+            echo "$port"
+            return
+        fi
+    fi
+    echo "8082"
+}
+APP_PORT="$(detect_app_port)"
 
 log_info() {
     printf "%b\n" "${BLUE}[INFO]${NC} $1"

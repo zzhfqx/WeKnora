@@ -26,7 +26,9 @@ func (s *knowledgeService) CreateKnowledgeFromFile(ctx context.Context,
 	kbID string, file *multipart.FileHeader, metadata map[string]string, enableMultimodel *bool, customFileName string, tagIDs []string, channel string,
 	processOverrides *types.KnowledgeProcessOverrides,
 ) (*types.Knowledge, error) {
-	logger.Info(ctx, "Start creating knowledge from file")
+	startTime := time.Now()
+	logger.Infof(ctx, "开始处理文件上传，文件名: %s，文件大小: %d 字节 (%.2f MB)",
+		file.Filename, file.Size, float64(file.Size)/1024/1024)
 
 	// Use custom filename if provided, otherwise use original filename. Folder
 	// uploads pass a path-qualified name ("docs/spec/design.md"): the directory
@@ -99,6 +101,9 @@ func (s *knowledgeService) CreateKnowledgeFromFile(ctx context.Context,
 		return nil, err
 	}
 	if exists {
+		elapsed := time.Since(startTime)
+		logger.Infof(ctx, "文件上传跳过（重复文件），文件名: %s，文件大小: %.2f MB，耗时: %s (%.1f秒)",
+			fileName, float64(file.Size)/1024/1024, elapsed, elapsed.Seconds())
 		logger.Infof(ctx, "File already exists: %s", fileName)
 		// Update creation time for existing knowledge
 		if err := s.repo.UpdateKnowledgeColumn(ctx, existingKnowledge.ID, "created_at", time.Now()); err != nil {
@@ -273,6 +278,9 @@ func (s *knowledgeService) CreateKnowledgeFromFile(ctx context.Context,
 
 	enqueueDataTableSummaryIfNeeded(ctx, s.task, tenantID, knowledge.ID, safeFilename, getFileType(safeFilename), kb.SummaryModelID, kb.EmbeddingModelID)
 
+	elapsed := time.Since(startTime)
+	logger.Infof(ctx, "文件上传完成，文件名: %s，文件大小: %.2f MB，总耗时: %s (%.1f秒)",
+		knowledge.FileName, float64(knowledge.FileSize)/1024/1024, elapsed, elapsed.Seconds())
 	logger.Infof(ctx, "Knowledge from file created successfully, ID: %s", knowledge.ID)
 	return knowledge, nil
 }
