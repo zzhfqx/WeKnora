@@ -1,0 +1,1789 @@
+{
+  "version": "v0.5",
+  "ontology_name": "保险监管本体模板",
+  "ontology_name_en": "Insurance Regulatory Ontology Template",
+  "description": "保险监管领域两级本体模板。L1为领域分类，L2为核心实体类及结构化属性。所有概念均有法规文档依据。",
+  "structure": "两级目录（L1领域分类 + L2实体类）",
+  "ontology": {
+    "level_1": [
+      {
+        "id": "L1-01",
+        "name": "保险",
+        "name_en": "Insurance",
+        "description": "保险产品及保险业务相关实体类",
+        "source_refs": [
+          "DOC-01意外伤害保险业务监管办法",
+          "DOC-02互联网人身保险通知",
+          "DOC-03定价回溯通知",
+          "DOC-04个税优惠健康险通知",
+          "DOC-05团体保险通知",
+          "DOC-06强化产品监管通知",
+          "DOC-07责任转换试点通知"
+        ],
+        "level_2": [
+          {
+            "id": "L2-0101",
+            "name": "意外伤害保险类",
+            "name_en": "AccidentInsurance",
+            "description": "以被保险人因遭受意外伤害造成死亡、残疾为给付保险金条件的人身保险",
+            "source_refs": [
+              "DOC-01 第二条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "保险责任",
+                "name_en": "insurance_liability",
+                "classify_name": "核心属性",
+                "type": "array<string>",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "意外险的保险责任范围：意外身故、意外伤残、意外医疗等",
+                "source_refs": [
+                  "DOC-01 第二条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "预定利率",
+                "name_en": "pricing_interest_rate",
+                "classify_name": "定价参数",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "意外险产品的预定利率",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "预定发生率",
+                "name_en": "expected_incidence_rate",
+                "classify_name": "定价参数",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "意外险产品的预定意外发生率",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "附加费用率",
+                "name_en": "loading_expense_ratio",
+                "classify_name": "定价参数",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "意外险产品的附加费用率",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "佣金费用率上限",
+                "name_en": "commission_rate_cap",
+                "classify_name": "费用管理",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "向中介机构支付的佣金费用率上限，需在产品备案材料中列明",
+                "source_refs": [
+                  "DOC-01 第八条"
+                ],
+                "confidence": "medium"
+              },
+              {
+                "name": "再保安排要求",
+                "name_en": "reinsurance_requirement",
+                "classify_name": "风险管理",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "航空意外险等特定产品需单列再保计划，做好再保险安排",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "信息披露要求",
+                "name_en": "disclosure_requirement",
+                "classify_name": "监管要求",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": true,
+                "description": "每年4月30日前在官方网站对上一年度个人意外险业务经营情况公开披露",
+                "source_refs": [
+                  "DOC-01 第二十二条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "定价回溯要求",
+                "name_en": "pricing_review_required",
+                "classify_name": "监管要求",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": true,
+                "description": "意外险产品需纳入定价回溯机制，回溯指标为再保后赔付率、费用率",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0102",
+            "name": "健康保险类",
+            "name_en": "HealthInsurance",
+            "description": "以被保险人健康为保险标的，对因健康原因导致的损失给付保险金的保险。包括疾病保险、医疗保险、长期护理保险等",
+            "source_refs": [
+              "DOC-02 第（八）条",
+              "DOC-04 个税优惠健康险通知"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "保险责任类型",
+                "name_en": "liability_type",
+                "classify_name": "核心属性",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "健康保险的责任类型",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "疾病保险",
+                  "医疗保险",
+                  "长期护理保险",
+                  "失能收入损失保险"
+                ]
+              },
+              {
+                "name": "个税优惠资质",
+                "name_en": "tax_preferential_qualification",
+                "classify_name": "政策属性",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": false,
+                "description": "是否为个人税收优惠型健康保险产品",
+                "source_refs": [
+                  "DOC-04"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "经营准入条件",
+                "name_en": "operating_conditions",
+                "classify_name": "准入条件",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "经营个税优惠健康险的准入条件：所有者权益≥30亿、偿付能力≥100%等",
+                "source_refs": [
+                  "DOC-04 第三条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "万能账户要求",
+                "name_en": "universal_account_requirement",
+                "classify_name": "产品设计",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "个税优惠健康险采取万能险方式，包含医疗保险和个人账户积累两项责任",
+                "source_refs": [
+                  "DOC-04 第二条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "责任转换试点",
+                "name_en": "liability_conversion_pilot",
+                "classify_name": "创新业务",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": false,
+                "description": "人寿保险可通过责任转换业务转换为长期护理保险责任（试点）",
+                "source_refs": [
+                  "DOC-07 第（一）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "定价回溯要求",
+                "name_en": "pricing_review_required",
+                "classify_name": "监管要求",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": true,
+                "description": "健康险业务需纳入定价回溯机制",
+                "source_refs": [
+                  "DOC-03 全文"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0103",
+            "name": "人寿保险类",
+            "name_en": "LifeInsurance",
+            "description": "以被保险人的寿命为保险标的，且以被保险人的生存或死亡为给付条件的人身保险",
+            "source_refs": [
+              "DOC-02 第（八）条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "保险责任",
+                "name_en": "insurance_liability",
+                "classify_name": "核心属性",
+                "type": "array<string>",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "人寿保险的保险责任：身故、生存给付等",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "预定利率",
+                "name_en": "pricing_interest_rate",
+                "classify_name": "定价参数",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "人寿保险产品的预定利率",
+                "source_refs": [
+                  "DOC-02"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "预定死亡率",
+                "name_en": "expected_mortality_rate",
+                "classify_name": "定价参数",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "人寿保险产品的预定死亡率",
+                "source_refs": [],
+                "confidence": "medium"
+              },
+              {
+                "name": "长期险回溯指标",
+                "name_en": "long_term_review_indicators",
+                "classify_name": "监管要求",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "长期险回溯指标：发生率、费用率、退保率、投资收益率",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "十年期以上资质要求",
+                "name_en": "ten_year_plus_requirement",
+                "classify_name": "准入条件",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "通过互联网销售十年期以上普通型人寿保险的额外资质要求",
+                "source_refs": [
+                  "DOC-02 第（十一）条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0104",
+            "name": "年金保险类",
+            "name_en": "AnnuityInsurance",
+            "description": "以被保险人生存为给付保险金条件，并按约定的时间间隔分期给付生存保险金的人身保险",
+            "source_refs": [
+              "DOC-02 第（八）条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "保险责任",
+                "name_en": "insurance_liability",
+                "classify_name": "核心属性",
+                "type": "array<string>",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "年金保险的保险责任：生存年金给付、身故保险金等",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "预定利率",
+                "name_en": "pricing_interest_rate",
+                "classify_name": "定价参数",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "年金保险产品的预定利率",
+                "source_refs": [],
+                "confidence": "medium"
+              },
+              {
+                "name": "领取方式",
+                "name_en": "payment_method",
+                "classify_name": "产品设计",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "年金领取方式",
+                "source_refs": [],
+                "confidence": "medium",
+                "enum_values": [
+                  "年领",
+                  "季领",
+                  "月领",
+                  "一次性领取"
+                ]
+              },
+              {
+                "name": "长期险回溯指标",
+                "name_en": "long_term_review_indicators",
+                "classify_name": "监管要求",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "长期险回溯指标：发生率、费用率、退保率、投资收益率",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "十年期以上资质要求",
+                "name_en": "ten_year_plus_requirement",
+                "classify_name": "准入条件",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "通过互联网销售十年期以上普通型年金保险的额外资质要求",
+                "source_refs": [
+                  "DOC-02 第（十一）条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0105",
+            "name": "互联网人身保险类",
+            "name_en": "InternetLifeInsurance",
+            "description": "通过互联网渠道销售的人身保险产品，涵盖人寿保险、年金保险、健康保险、意外伤害保险等",
+            "source_refs": [
+              "DOC-02 互联网人身保险通知"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "经营准入条件",
+                "name_en": "operating_conditions",
+                "classify_name": "准入条件",
+                "type": "string",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "开展互联网人身保险业务的基本准入条件：连续四季度综合偿付≥120%、核心≥75%、责任准备金>100%、风险评级B类以上、公司治理C级以上",
+                "source_refs": [
+                  "DOC-02 第（三）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "可售险种范围",
+                "name_en": "sellable_product_scope",
+                "classify_name": "业务范围",
+                "type": "array<L2-01>",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "通过互联网可销售的人身保险险种范围",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "咨询接通率要求",
+                "name_en": "consultation_connect_rate",
+                "classify_name": "服务标准",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "95",
+                "description": "消费者咨询或服务请求接通率不低于95%",
+                "source_refs": [
+                  "DOC-02 第（六）条第1款"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "电子保单送达时效",
+                "name_en": "e_policy_delivery_time",
+                "classify_name": "服务标准",
+                "type": "number",
+                "unit": "工作日",
+                "required": false,
+                "default_value": "2",
+                "description": "电子保单应自承保后2个工作日内送达投保人",
+                "source_refs": [
+                  "DOC-02 第（六）条第4款"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "理赔核定时效",
+                "name_en": "claim_settlement_time",
+                "classify_name": "服务标准",
+                "type": "number",
+                "unit": "工作日",
+                "required": false,
+                "default_value": "5",
+                "description": "收到完整材料后5个工作日内作出核定，复杂情形可延展至30日",
+                "source_refs": [
+                  "DOC-02 第（六）条第6款"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "适当性评估",
+                "name_en": "suitability_assessment",
+                "classify_name": "销售管理",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": true,
+                "description": "互联网人身保险业务应于投保前进行适当性评估",
+                "source_refs": [
+                  "DOC-02 第（十四）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "定价回溯要求",
+                "name_en": "pricing_review_required",
+                "classify_name": "监管要求",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": true,
+                "description": "互联网人身保险业务需进行定价回溯，总精算师为直接责任人",
+                "source_refs": [
+                  "DOC-02 第（十六）条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0106",
+            "name": "团体保险类",
+            "name_en": "GroupInsurance",
+            "description": "以团体为保险对象，以集体名义投保并由保险人签发一份总的保险合同的保险",
+            "source_refs": [
+              "DOC-05 团体保险业务通知"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "投保团体类型",
+                "name_en": "group_type",
+                "classify_name": "核心属性",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "投保团体的类型",
+                "source_refs": [
+                  "DOC-05"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "企业团体",
+                  "机关事业单位",
+                  "社会团体",
+                  "其他团体"
+                ]
+              },
+              {
+                "name": "参保人数要求",
+                "name_en": "participant_requirement",
+                "classify_name": "准入条件",
+                "type": "number",
+                "unit": "人",
+                "required": false,
+                "default_value": "",
+                "description": "团体保险的最低参保人数要求",
+                "source_refs": [
+                  "DOC-05"
+                ],
+                "confidence": "medium"
+              },
+              {
+                "name": "参保比例要求",
+                "name_en": "participation_ratio_requirement",
+                "classify_name": "准入条件",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "符合条件人数的参保比例要求",
+                "source_refs": [
+                  "DOC-05"
+                ],
+                "confidence": "medium"
+              },
+              {
+                "name": "禁止行为",
+                "name_en": "prohibited_behavior",
+                "classify_name": "行为规范",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "团体保险禁止行为：向非团体成员销售、虚构团体、套取费用等",
+                "source_refs": [
+                  "DOC-05"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "信息告知要求",
+                "name_en": "information_disclosure_requirement",
+                "classify_name": "合规要求",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "应向被保险人明确告知其保险权益",
+                "source_refs": [
+                  "DOC-05"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0107",
+            "name": "产品开发管理类",
+            "name_en": "ProductDevelopmentManagement",
+            "description": "保险产品的设计开发、定价、条款制定、审批备案、退出等全生命周期管理活动",
+            "source_refs": [
+              "DOC-06 强化产品监管通知",
+              "DOC-01 第二章"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "定价方法",
+                "name_en": "pricing_method",
+                "classify_name": "定价管理",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "产品定价使用的方法和依据，包括预定利率、预定发生率、附加费用率等定价要素",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "精算报告要求",
+                "name_en": "actuarial_report_requirements",
+                "classify_name": "备案材料",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "产品备案需提交的精算报告内容要求",
+                "source_refs": [
+                  "DOC-01 第七条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "备案方式",
+                "name_en": "filing_method",
+                "classify_name": "监管方式",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "事后备案",
+                "description": "产品的审批或备案方式",
+                "source_refs": [
+                  "DOC-06 第一条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "事前审批",
+                  "事后备案"
+                ]
+              },
+              {
+                "name": "备案时限",
+                "name_en": "filing_deadline",
+                "classify_name": "时限要求",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "销售后10日内",
+                "description": "事后备案的时限要求",
+                "source_refs": [
+                  "DOC-06 第一条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "产品退出机制",
+                "name_en": "product_exit_mechanism",
+                "classify_name": "生命周期管理",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "产品退出市场的方式",
+                "source_refs": [
+                  "DOC-06 第二条、第四条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "主动停售",
+                  "责令停售",
+                  "到期终止"
+                ]
+              },
+              {
+                "name": "主动停售条件",
+                "name_en": "voluntary_discontinuation_criteria",
+                "classify_name": "退出条件",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "产品主动停售的触发条件：年度累计规模保费收入<100万且销售件数<5000件（产品使用未满一年除外）",
+                "source_refs": [
+                  "DOC-06 第四条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0108",
+            "name": "精算管理类",
+            "name_en": "ActuarialManagement",
+            "description": "保险精算相关的管理活动，包括产品定价、准备金评估、偿付能力评估、定价回溯等",
+            "source_refs": [
+              "DOC-03 定价回溯通知",
+              "DOC-01 第六条、第九条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "定价假设",
+                "name_en": "pricing_assumptions",
+                "classify_name": "定价参数",
+                "type": "array<string>",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "产品定价采用的精算假设，包括利率假设、发生率假设、费用假设、退保率假设等",
+                "source_refs": [
+                  "DOC-03 第二条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "定价回溯机制",
+                "name_en": "pricing_review_mechanism",
+                "classify_name": "监管要求",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "定期将实际经营情况与定价假设对比，识别偏差并采取措施",
+                "source_refs": [
+                  "DOC-03 第二条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "短期险回溯指标",
+                "name_en": "short_term_review_indicators",
+                "classify_name": "指标体系",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "保险期间一年及以下的产品回溯指标：再保后赔付率、费用率",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "长期险回溯指标",
+                "name_en": "long_term_review_indicators",
+                "classify_name": "指标体系",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "保险期间一年以上的产品回溯指标：发生率、费用率、退保率、投资收益率",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "偏差计算公式",
+                "name_en": "deviation_formula",
+                "classify_name": "计算方法",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "回溯指标 R_k = |实际经营情况 / 精算假设k - 1|",
+                "source_refs": [
+                  "DOC-03 第二条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "予以关注偏差阈值",
+                "name_en": "attention_deviation_threshold",
+                "classify_name": "偏差分级",
+                "type": "string",
+                "unit": "%",
+                "required": false,
+                "default_value": "10-30",
+                "description": "偏差在 [10%, 30%) 区间时，予以关注",
+                "source_refs": [
+                  "DOC-03 第二条第（三）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "调整改进偏差阈值",
+                "name_en": "improvement_deviation_threshold",
+                "classify_name": "偏差分级",
+                "type": "string",
+                "unit": "%",
+                "required": false,
+                "default_value": "30-50",
+                "description": "偏差在 [30%, 50%) 区间时，需调整改进",
+                "source_refs": [
+                  "DOC-03 第二条第（三）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "主动报告偏差阈值",
+                "name_en": "reporting_deviation_threshold",
+                "classify_name": "偏差分级",
+                "type": "string",
+                "unit": "%",
+                "required": false,
+                "default_value": "50+",
+                "description": "偏差在 [50%, +∞) 区间时，需主动报告并按要求信息披露",
+                "source_refs": [
+                  "DOC-03 第二条第（三）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "总精算师责任",
+                "name_en": "chief_actuary_responsibility",
+                "classify_name": "责任主体",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "总精算师对产品定价和回溯工作负有直接责任",
+                "source_refs": [
+                  "DOC-02 第（十六）条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0109",
+            "name": "销售管理类",
+            "name_en": "SalesManagement",
+            "description": "保险产品销售活动及其管理，包括渠道管理、销售行为规范、佣金管理等",
+            "source_refs": [
+              "DOC-01 第三章",
+              "DOC-02 第（十二）（十四）条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "销售渠道",
+                "name_en": "sales_channel",
+                "classify_name": "渠道分类",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "保险产品的销售渠道",
+                "source_refs": [
+                  "DOC-01 第三章",
+                  "DOC-02"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "互联网渠道",
+                  "保险中介机构",
+                  "银行渠道",
+                  "保险公司直销",
+                  "团体直销",
+                  "激活注册式"
+                ]
+              },
+              {
+                "name": "禁止销售行为",
+                "name_en": "prohibited_sales_behavior",
+                "classify_name": "行为规范",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "禁止的销售行为：强迫订立合同、捆绑销售、无资质机构销售、跨区域委托、夸大宣传、混淆险种、套取资金、预收保费、向非团体成员销售等",
+                "source_refs": [
+                  "DOC-01 第十七条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "客户信息真实性",
+                "name_en": "customer_information_authenticity",
+                "classify_name": "销售管理",
+                "type": "boolean",
+                "unit": "",
+                "required": false,
+                "default_value": true,
+                "description": "保险公司应加强客户信息真实性管理，对销售及中介机构提供的客户信息进行审核",
+                "source_refs": [
+                  "DOC-01 第十八条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "佣金费用率上限",
+                "name_en": "commission_rate_cap",
+                "classify_name": "费用管理",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "向中介机构支付的佣金费用率上限，需在产品备案材料中列明",
+                "source_refs": [
+                  "DOC-01 第八条",
+                  "DOC-02 第（十）条"
+                ],
+                "confidence": "medium"
+              },
+              {
+                "name": "中介机构资质要求",
+                "name_en": "intermediary_qualification",
+                "classify_name": "渠道管理",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "销售保险产品的中介机构需符合相应资质要求",
+                "source_refs": [
+                  "DOC-01 第十二条",
+                  "DOC-02 第（十二）条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0110",
+            "name": "再保险业务类",
+            "name_en": "ReinsuranceBusiness",
+            "description": "保险公司将其承担的保险业务部分转移给其他保险公司的业务，用于分散风险",
+            "source_refs": [
+              "DOC-01 第六条、第十条",
+              "DOC-03 第二条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "再保方式",
+                "name_en": "reinsurance_type",
+                "classify_name": "分类属性",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "再保险的方式",
+                "source_refs": [],
+                "confidence": "medium",
+                "enum_values": [
+                  "比例再保险",
+                  "非比例再保险"
+                ]
+              },
+              {
+                "name": "再保后赔付率",
+                "name_en": "reinsured_claims_ratio",
+                "classify_name": "经营指标",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "再保险后的赔付率指标，为定价回溯的核心指标之一",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "再保计划要求",
+                "name_en": "reinsurance_plan_requirement",
+                "classify_name": "风险管理",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "再保险安排的具体计划要求。航空意外险需单列再保计划",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ],
+                "confidence": "medium"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L1-02",
+        "name": "金融监管",
+        "name_en": "FinancialRegulation",
+        "description": "金融监管领域相关实体类，包括监管机构、被监管机构、监管措施、监管报告等",
+        "source_refs": [
+          "DOC-01 第五章",
+          "DOC-06 强化产品监管通知",
+          "DOC-08 定期报送通知",
+          "DOC-10 清简报送通知"
+        ],
+        "level_2": [
+          {
+            "id": "L2-0201",
+            "name": "监管机构类",
+            "name_en": "RegulatoryAgency",
+            "description": "依法对保险行业行使监管职权的政府机构",
+            "source_refs": [
+              "各法规文件发布主体",
+              "DOC-01 第五章"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "监管层级",
+                "name_en": "regulatory_level",
+                "classify_name": "基本信息",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "监管机构的层级",
+                "source_refs": [
+                  "DOC-01 第二十四条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "国家级",
+                  "省局级（银保监局）",
+                  "分局级"
+                ]
+              },
+              {
+                "name": "机构沿革",
+                "name_en": "institutional_history",
+                "classify_name": "历史属性",
+                "type": "array<string>",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "机构历史沿革：中国保险监督管理委员会 → 中国银行保险监督管理委员会 → 国家金融监督管理总局",
+                "source_refs": [
+                  "各文件发布机构名称变化"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "主要职责",
+                "name_en": "main_responsibilities",
+                "classify_name": "职能属性",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "监管机构的主要监管职责",
+                "source_refs": [
+                  "DOC-01 第五章"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0202",
+            "name": "被监管机构类",
+            "name_en": "RegulatedInstitution",
+            "description": "接受金融监管机构监督管理的机构，包括人身保险公司、保险中介机构等",
+            "source_refs": [
+              "DOC-01 第二条",
+              "DOC-02 第（一）条",
+              "DOC-06 第三条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "机构类型",
+                "name_en": "institution_type",
+                "classify_name": "分类属性",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "被监管机构的类型",
+                "source_refs": [
+                  "DOC-01 第二条",
+                  "DOC-02 第（一）条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "人身保险公司",
+                  "财产保险公司",
+                  "保险中介机构",
+                  "保险资产管理公司"
+                ]
+              },
+              {
+                "name": "公司性质",
+                "name_en": "company_nature",
+                "classify_name": "基本属性",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "公司的性质分类",
+                "source_refs": [
+                  "DOC-04 中相互保险公司特殊规定"
+                ],
+                "confidence": "medium",
+                "enum_values": [
+                  "中资",
+                  "外资",
+                  "合资",
+                  "相互保险"
+                ]
+              },
+              {
+                "name": "综合偿付能力充足率",
+                "name_en": "comprehensive_solvency_ratio",
+                "classify_name": "偿付能力",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "综合偿付能力充足率。互联网人身险≥120%；十年期以上普通型人寿/年金>150%",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "核心偿付能力充足率",
+                "name_en": "core_solvency_ratio",
+                "classify_name": "偿付能力",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "核心偿付能力充足率。互联网人身险≥75%；十年期以上普通型人寿/年金≥100%",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "风险综合评级",
+                "name_en": "risk_comprehensive_rating",
+                "classify_name": "监管评级",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "风险综合评级。互联网人身险需连续四季度B类及以上；十年期以上需A类以上",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "A类",
+                  "B类",
+                  "C类",
+                  "D类"
+                ]
+              },
+              {
+                "name": "公司治理评估等级",
+                "name_en": "corporate_governance_rating",
+                "classify_name": "监管评级",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "公司治理评估等级。互联网人身险需C级及以上；十年期以上需B级及以上",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "A级",
+                  "B级",
+                  "C级",
+                  "D级"
+                ]
+              },
+              {
+                "name": "责任准备金覆盖率",
+                "name_en": "reserve_coverage_ratio",
+                "classify_name": "精算评估",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "责任准备金覆盖率。互联网人身险>100%；个税优惠健康险≥100%",
+                "source_refs": [
+                  "DOC-02 第（三）条",
+                  "DOC-04 第三条第（三）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "所有者权益",
+                "name_en": "owners_equity",
+                "classify_name": "财务指标",
+                "type": "number",
+                "unit": "亿元",
+                "required": false,
+                "default_value": "",
+                "description": "上年度末所有者权益。经营个税优惠健康险需≥30亿元",
+                "source_refs": [
+                  "DOC-04 第三条第（一）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "总经理",
+                "name_en": "general_manager",
+                "classify_name": "高级管理人员",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "对产品开发管理负有领导责任，担任产品开发管理工作组组长",
+                "source_refs": [
+                  "DOC-06 第三条、第四条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "总精算师",
+                "name_en": "chief_actuary",
+                "classify_name": "高级管理人员",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "对产品负有精算审核职责。互联网人身保险业务回溯工作的直接责任人",
+                "source_refs": [
+                  "DOC-06 第三条",
+                  "DOC-02 第（十六）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "法律责任人",
+                "name_en": "legal_responsible_person",
+                "classify_name": "高级管理人员",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "对产品负有法律审核职责",
+                "source_refs": [
+                  "DOC-06 第三条"
+                ],
+                "confidence": "medium"
+              }
+            ]
+          },
+          {
+            "id": "L2-0203",
+            "name": "监管措施类",
+            "name_en": "RegulatoryMeasures",
+            "description": "监管机构对被监管机构采取的各种监督管理措施",
+            "source_refs": [
+              "DOC-06 第一条、第二条、第三条",
+              "DOC-10 清简报送通知"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "措施类型",
+                "name_en": "measure_type",
+                "classify_name": "分类属性",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "监管措施的类型",
+                "source_refs": [
+                  "DOC-06 全文"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "备案管理",
+                  "事后抽查",
+                  "问责处罚",
+                  "产品退出",
+                  "清简报送",
+                  "行政许可"
+                ]
+              },
+              {
+                "name": "适用对象",
+                "name_en": "applicable_object",
+                "classify_name": "适用范围",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "监管措施适用的对象",
+                "source_refs": [],
+                "confidence": "high"
+              },
+              {
+                "name": "备案方式",
+                "name_en": "filing_method",
+                "classify_name": "备案管理",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "事后备案",
+                "description": "产品备案的方式",
+                "source_refs": [
+                  "DOC-06 第一条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "事前审批",
+                  "事后备案"
+                ]
+              },
+              {
+                "name": "备案时限",
+                "name_en": "filing_deadline",
+                "classify_name": "时限要求",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "销售后10日内",
+                "description": "事后备案的时限要求",
+                "source_refs": [
+                  "DOC-06 第一条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "产品退出机制",
+                "name_en": "product_exit_mechanism",
+                "classify_name": "退出管理",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "监管机构对违法违规产品有权责令停止使用并公开披露停售信息",
+                "source_refs": [
+                  "DOC-06 第二条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "问责对象",
+                "name_en": "accountable_persons",
+                "classify_name": "问责机制",
+                "type": "array<string>",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "被问责的相关责任人，包括总经理、总精算师、法律责任人等",
+                "source_refs": [
+                  "DOC-06 第三条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "处罚措施",
+                "name_en": "penalty_measures",
+                "classify_name": "处罚方式",
+                "type": "array<string>",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "可采取的处罚措施，包括禁止申报新产品（3个月至1年）、约谈责任人、警告、撤销任职资格等",
+                "source_refs": [
+                  "DOC-06 第三条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "清简类型",
+                "name_en": "streamlining_type",
+                "classify_name": "清简管理",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "报送文件清简的类型",
+                "source_refs": [
+                  "DOC-10"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "取消报送",
+                  "合并报送",
+                  "调整报送频次"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0204",
+            "name": "监管报告类",
+            "name_en": "RegulatoryReport",
+            "description": "被监管机构按规定向监管机构报送的各类报告",
+            "source_refs": [
+              "DOC-08 定期报送产品总结报告通知",
+              "DOC-09 2019年产品总结报告通知",
+              "DOC-06 第四条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "报告类型",
+                "name_en": "report_type",
+                "classify_name": "分类属性",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "报送报告的类型",
+                "source_refs": [
+                  "DOC-08",
+                  "DOC-06 第四条"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "产品总结报告",
+                  "产品回溯报告",
+                  "经营情况报告",
+                  "试点进展报告",
+                  "业务经营报告"
+                ]
+              },
+              {
+                "name": "报送频率",
+                "name_en": "submission_frequency",
+                "classify_name": "时限要求",
+                "type": "enum",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "报告报送的频率",
+                "source_refs": [
+                  "DOC-08"
+                ],
+                "confidence": "high",
+                "enum_values": [
+                  "年度",
+                  "季度",
+                  "半年度",
+                  "月度",
+                  "一次性"
+                ]
+              },
+              {
+                "name": "报送时限",
+                "name_en": "submission_deadline",
+                "classify_name": "时限要求",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "报告报送的截止时间",
+                "source_refs": [
+                  "DOC-08",
+                  "DOC-09"
+                ],
+                "confidence": "medium"
+              },
+              {
+                "name": "报送方式",
+                "name_en": "submission_method",
+                "classify_name": "报送方式",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "报告报送的方式（书面、电子邮件、电子公文传输系统等）",
+                "source_refs": [
+                  "DOC-08"
+                ],
+                "confidence": "medium"
+              },
+              {
+                "name": "报告内容要求",
+                "name_en": "content_requirements",
+                "classify_name": "内容要求",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "报告应包含的主要内容：产品结构特点、合规情况、经营情况、产品退出情况、精算假设与实际经营情况回溯等",
+                "source_refs": [
+                  "DOC-06 第四条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "审议程序",
+                "name_en": "review_procedure",
+                "classify_name": "管理流程",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "报告应经董事会审议后提交监管机构备查",
+                "source_refs": [
+                  "DOC-06 第四条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          },
+          {
+            "id": "L2-0205",
+            "name": "偿付能力监管类",
+            "name_en": "SolvencyRegulation",
+            "description": "以偿付能力充足率为核心的保险公司风险监管制度，是多项业务准入的核心门槛",
+            "source_refs": [
+              "DOC-02 第（三）（十一）条"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "综合偿付能力充足率",
+                "name_en": "comprehensive_solvency_ratio",
+                "classify_name": "核心指标",
+                "type": "number",
+                "unit": "%",
+                "required": true,
+                "default_value": "",
+                "description": "综合偿付能力充足率要求（互联网人身险≥120%；十年期以上普通型人寿/年金>150%）",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "核心偿付能力充足率",
+                "name_en": "core_solvency_ratio",
+                "classify_name": "核心指标",
+                "type": "number",
+                "unit": "%",
+                "required": true,
+                "default_value": "",
+                "description": "核心偿付能力充足率要求（互联网人身险≥75%；十年期以上普通型人寿/年金≥100%）",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "责任准备金覆盖率",
+                "name_en": "reserve_coverage_ratio",
+                "classify_name": "配套指标",
+                "type": "number",
+                "unit": "%",
+                "required": false,
+                "default_value": "",
+                "description": "责任准备金覆盖率要求（互联网人身险>100%；个税优惠健康险≥100%）",
+                "source_refs": [
+                  "DOC-02 第（三）条",
+                  "DOC-04 第三条第（三）项"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "风险综合评级要求",
+                "name_en": "risk_rating_requirement",
+                "classify_name": "配套指标",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "不同业务的风险综合评级要求",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high"
+              },
+              {
+                "name": "公司治理评估要求",
+                "name_en": "governance_rating_requirement",
+                "classify_name": "配套指标",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "不同业务的公司治理评估等级要求",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ],
+                "confidence": "high"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L1-03",
+        "name": "监管法规",
+        "name_en": "RegulatoryDocuments",
+        "description": "监管法规文件相关实体类，是保险和金融监管领域概念的法规依据来源",
+        "source_refs": [
+          "DOC-01 至 DOC-11"
+        ],
+        "level_2": [
+          {
+            "id": "L2-0301",
+            "name": "规范性文件类",
+            "name_en": "RegulatoryDocument",
+            "description": "监管机构发布的各类规范性文件，包括规章、通知、办法等，是保险监管的法规依据",
+            "source_refs": [
+              "DOC-01 至 DOC-11"
+            ],
+            "confidence": "high",
+            "core_attributes": [
+              {
+                "name": "文件名称",
+                "name_en": "title",
+                "classify_name": "基本信息",
+                "type": "string",
+                "unit": "",
+                "required": true,
+                "default_value": "",
+                "description": "法规文件的完整名称",
+                "source_refs": [],
+                "confidence": "high"
+              },
+              {
+                "name": "文号",
+                "name_en": "document_number",
+                "classify_name": "基本信息",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "法规文件的文号，如银保监办发〔2021〕108号",
+                "source_refs": [],
+                "confidence": "high"
+              },
+              {
+                "name": "发布机构",
+                "name_en": "issuing_authority",
+                "classify_name": "发布信息",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "法规文件的发布机构",
+                "source_refs": [],
+                "confidence": "high"
+              },
+              {
+                "name": "发布日期",
+                "name_en": "issue_date",
+                "classify_name": "发布信息",
+                "type": "date",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "法规文件的发布日期",
+                "source_refs": [],
+                "confidence": "high"
+              },
+              {
+                "name": "施行日期",
+                "name_en": "effective_date",
+                "classify_name": "效力信息",
+                "type": "date",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "法规文件的施行日期",
+                "source_refs": [],
+                "confidence": "medium"
+              },
+              {
+                "name": "效力状态",
+                "name_en": "status",
+                "classify_name": "效力信息",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "现行有效",
+                "description": "法规文件的当前效力状态",
+                "source_refs": [],
+                "confidence": "high",
+                "enum_values": [
+                  "现行有效",
+                  "已废止",
+                  "修订中",
+                  "试点中"
+                ]
+              },
+              {
+                "name": "法规层级",
+                "name_en": "legal_level",
+                "classify_name": "效力层级",
+                "type": "enum",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "法规的效力层级",
+                "source_refs": [],
+                "confidence": "high",
+                "enum_values": [
+                  "法律",
+                  "行政法规",
+                  "部门规章",
+                  "规范性文件",
+                  "内部通知"
+                ]
+              },
+              {
+                "name": "主题分类",
+                "name_en": "topic_category",
+                "classify_name": "内容分类",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "法规文件的主要主题分类",
+                "source_refs": [],
+                "confidence": "medium"
+              },
+              {
+                "name": "适用对象",
+                "name_en": "applicable_subjects",
+                "classify_name": "适用范围",
+                "type": "string",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "法规文件适用的机构或对象",
+                "source_refs": [],
+                "confidence": "high"
+              },
+              {
+                "name": "废止文件",
+                "name_en": "repealed_documents",
+                "classify_name": "效力关系",
+                "type": "array<L2-0301>",
+                "unit": "",
+                "required": false,
+                "default_value": "",
+                "description": "本文件废止的旧文件列表",
+                "source_refs": [
+                  "多份文档末尾明确废止旧文件"
+                ],
+                "confidence": "medium"
+              },
+              {
+                "name": "附件数量",
+                "name_en": "attachment_count",
+                "classify_name": "文件结构",
+                "type": "number",
+                "unit": "个",
+                "required": false,
+                "default_value": "",
+                "description": "法规文件包含的附件数量",
+                "source_refs": [],
+                "confidence": "medium"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

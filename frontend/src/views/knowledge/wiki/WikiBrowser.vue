@@ -495,12 +495,22 @@
                           {{ editSourceLabel(selectedPage.last_edit_source) }}
                         </span>
                       </t-tooltip>
-                      <span v-for="alias in (selectedPage.aliases || [])" :key="alias"
-                        class="wiki-badge wiki-badge--alias"
-                        :title="`${$t('knowledgeEditor.wikiBrowser.aliases')} ${alias}`">
-                        <t-icon name="link" />
-                        {{ alias }}
-                      </span>
+                      <template v-if="editingPage">
+                        <t-tag-input
+                          v-model="editForm.aliases"
+                          class="wiki-edit-aliases-input"
+                          :placeholder="$t('knowledgeEditor.wikiBrowser.aliasInputPlaceholder')"
+                          clearable
+                        />
+                      </template>
+                      <template v-else>
+                        <span v-for="alias in (selectedPage.aliases || [])" :key="alias"
+                          class="wiki-badge wiki-badge--alias"
+                          :title="`${$t('knowledgeEditor.wikiBrowser.aliases')} ${alias}`">
+                          <t-icon name="link" />
+                          {{ alias }}
+                        </span>
+                      </template>
                     </div>
                     <p v-if="!editingPage && selectedPage.summary" class="wiki-reader-lead">{{ selectedPage.summary }}</p>
                     <t-textarea v-if="editingPage" v-model="editForm.summary"
@@ -2989,7 +2999,7 @@ async function loadStats() {
 
 const editingPage = ref(false)
 const savingPage = ref(false)
-const editForm = ref({ title: '', summary: '', content: '' })
+const editForm = ref({ title: '', summary: '', content: '', aliases: [] as string[] })
 // Version the user started editing from — the optimistic-lock guard sent
 // with the save. 409 → someone (or the pipeline) edited in between.
 const editBaseVersion = ref(0)
@@ -3015,6 +3025,7 @@ function startEditPage() {
     title: selectedPage.value.title,
     summary: selectedPage.value.summary || '',
     content: selectedPage.value.content || '',
+    aliases: [...(selectedPage.value.aliases || [])],
   }
   editBaseVersion.value = selectedPage.value.version
   editConflictVersion.value = null
@@ -3035,6 +3046,7 @@ async function savePageEdit(versionOverride?: number) {
       title: editForm.value.title,
       summary: editForm.value.summary,
       content: editForm.value.content,
+      aliases: editForm.value.aliases,
       version: versionOverride ?? editBaseVersion.value,
     })
     const updated = ((res as any).data || res) as WikiPage
@@ -5626,6 +5638,11 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.wiki-edit-aliases-input {
+  min-width: 200px;
+  max-width: 100%;
 }
 
 .wiki-nav-bar {

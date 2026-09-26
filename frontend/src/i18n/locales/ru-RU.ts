@@ -3993,6 +3993,7 @@ export default {
       selectPageHint: 'Выберите страницу слева для просмотра',
       version: 'v{ver}',
       aliases: 'Псевдонимы',
+      aliasInputPlaceholder: 'Добавьте псевдоним, нажмите Enter для подтверждения',
       linkedFrom: 'Цитируется',
       sources: 'Исходные документы',
       graphEmpty: 'Загрузка графа...',

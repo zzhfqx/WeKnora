@@ -3995,6 +3995,7 @@ export default {
       selectPageHint: '从左侧选择一个页面查看内容',
       version: 'v{ver}',
       aliases: '别名',
+      aliasInputPlaceholder: '添加别名，回车确认',
       linkedFrom: '被链接',
       sources: '来源文档',
       graphEmpty: '加载图谱中...',
@@ -4472,7 +4473,7 @@ export default {
     }
   },
   createChat: {
-    title: 'Hi，我是 WeKnora，让你的知识触手可及',
+    title: 'Hi，我是 小智，让你的知识触手可及',
     newSessionTitle: '新会话',
     messages: {
       createFailed: '创建会话失败',

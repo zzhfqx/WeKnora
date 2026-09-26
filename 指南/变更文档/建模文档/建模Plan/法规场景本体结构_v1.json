@@ -1,0 +1,2476 @@
+{
+  "version": "v1",
+  "scene": "法规场景",
+  "description": "法规场景的三级本体结构：法规→条款→业务对象。条款按条粒度平铺，暂不设二级分类（后续按需补充）。所有三级实体均有符合Wiki系统规范的slug，支持页面跳转。",
+  "structure_overview": {
+    "level_1": [
+      {
+        "id": "L1-01",
+        "name": "法规",
+        "name_en": "Regulations",
+        "description": "法规文档列表，二级目录为每份具体文档，三级为文档摘要页"
+      },
+      {
+        "id": "L1-02",
+        "name": "条款",
+        "name_en": "Clauses",
+        "description": "所有文档的具体条款，按条粒度平铺（暂不设二级分类，后续可按需补充），三级为具体条款页"
+      },
+      {
+        "id": "L1-03",
+        "name": "业务对象",
+        "name_en": "BusinessObjects",
+        "description": "从条款中提取的业务对象实体，三级为具体业务对象页（即Wiki实体类页面）"
+      }
+    ],
+    "level_2_placeholder_note": "条款层当前无二级目录（平铺），后续可根据分类需求补充"
+  },
+  "regulations": [
+    {
+      "doc_id": "DOC-01",
+      "title": "意外伤害保险业务监管办法",
+      "short_title": "意外险监管办法",
+      "doc_number": "银保监办发〔2021〕106号",
+      "issuing_authority": "中国银保监会办公厅",
+      "issue_date": "2021-09-30",
+      "effective_date": "2022-01-01",
+      "status": "现行有效",
+      "summary": "规范意外伤害保险业务经营活动，保护投保人、被保险人合法权益。共六章32条，涵盖产品管理、销售管理、信息管理与披露、监督管理等内容。",
+      "chapter_count": 6,
+      "article_count": 32,
+      "slug": "summary/doc-001-accident-insurance-regulation",
+      "folder": "法规/意外伤害保险业务监管办法",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-02",
+      "title": "关于进一步规范保险机构互联网人身保险业务有关事项的通知",
+      "short_title": "互联网人身险通知",
+      "doc_number": "银保监办发〔2021〕108号",
+      "issuing_authority": "中国银保监会办公厅",
+      "issue_date": "2021-10-12",
+      "effective_date": "2022-01-01",
+      "status": "现行有效",
+      "summary": "规范互联网人身保险业务，明确经营条件、产品范围、销售管理、回溯机制等。过渡期至2021年12月31日，回溯机制2023年1月1日正式实施。",
+      "chapter_count": 0,
+      "article_count": 18,
+      "slug": "summary/doc-002-internet-life-insurance-notice",
+      "folder": "法规/互联网人身保险业务通知",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-03",
+      "title": "关于试运行互联网人身保险业务定价回溯机制的通知",
+      "short_title": "定价回溯试运行通知",
+      "doc_number": "银保监办便函〔2021〕1275号",
+      "issuing_authority": "中国银保监会办公厅",
+      "issue_date": "2021-12",
+      "effective_date": "2022-01-01",
+      "status": "现行有效（试运行已转正）",
+      "summary": "开展互联网人身保险业务定价回溯试运行，为期一年。明确回溯指标、偏差分级（予以关注/调整改进/主动报告）和报告要求。",
+      "chapter_count": 0,
+      "article_count": 0,
+      "slug": "summary/doc-003-pricing-review-pilot-notice",
+      "folder": "法规/互联网人身险定价回溯通知",
+      "is_pilot": true
+    },
+    {
+      "doc_id": "DOC-04",
+      "title": "国家金融监督管理总局关于适用商业健康保险个人所得税优惠政策产品有关事项的通知",
+      "short_title": "个税优惠健康险通知",
+      "doc_number": "金规〔2023〕2号",
+      "issuing_authority": "国家金融监督管理总局",
+      "issue_date": "2023-07-04",
+      "effective_date": "2023-08-01",
+      "status": "现行有效",
+      "summary": "适用个税优惠政策的商业健康保险产品管理规定，涵盖产品范围（医疗险、长期护理险、疾病险）、设计原则、保险公司准入条件、经营报告与回溯分析要求。",
+      "chapter_count": 0,
+      "article_count": 0,
+      "slug": "summary/doc-004-tax-preferential-health-insurance",
+      "folder": "法规/个税优惠商业健康险通知",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-05",
+      "title": "中国保监会关于促进团体保险健康发展有关问题的通知",
+      "short_title": "团体保险通知",
+      "doc_number": "保监发〔2015〕14号",
+      "issuing_authority": "中国保监会",
+      "issue_date": "2015-01-29",
+      "effective_date": "2015-01-29",
+      "status": "现行有效",
+      "summary": "规范团体保险业务经营行为，明确团体保险定义（被保险人不少于3人）、条款费率管理、承保要求、保险凭证签发、退保金支付、承保地域等六大方面。",
+      "chapter_count": 0,
+      "article_count": 6,
+      "slug": "summary/doc-005-group-insurance-notice",
+      "folder": "法规/团体保险发展通知",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-06",
+      "title": "中国保监会关于强化人身保险产品监管工作的通知",
+      "short_title": "强化产品监管通知",
+      "doc_number": "保监寿险〔2016〕199号",
+      "issuing_authority": "中国保监会",
+      "issue_date": "2016-09-02",
+      "effective_date": "2016-09-02",
+      "status": "现行有效",
+      "summary": "强化人身保险产品监管的八项机制：事后备案和事后抽查、产品退出机制、问责机制、产品回溯机制、信息披露机制、新型产品销售管理、万能险经营管理。明确产品回溯的四项整改要求和停售标准。",
+      "chapter_count": 0,
+      "article_count": 8,
+      "slug": "summary/doc-006-strengthen-product-regulation",
+      "folder": "法规/强化人身保险产品监管通知",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-07",
+      "title": "中国银保监会办公厅关于开展人寿保险与长期护理保险责任转换业务试点的通知",
+      "short_title": "责任转换试点通知",
+      "doc_number": "银保监办发〔2023〕33号",
+      "issuing_authority": "中国银保监会办公厅",
+      "issue_date": "2023-03-27",
+      "effective_date": "2023-03-27",
+      "status": "试点中",
+      "summary": "人寿保险与长期护理保险责任转换业务试点。包含两种转换方法：保单贴现法（已进入护理状态）和精算等价法（尚未进入护理状态）。附件规定了精算规则、转换比例、备案要求等。",
+      "chapter_count": 0,
+      "article_count": 0,
+      "slug": "summary/doc-007-liability-conversion-pilot",
+      "folder": "法规/寿险与长护险责任转换试点通知",
+      "is_pilot": true
+    },
+    {
+      "doc_id": "DOC-08",
+      "title": "关于人身保险公司定期报送产品总结报告的通知",
+      "short_title": "定期报送产品总结报告通知",
+      "doc_number": "保监寿险〔2010〕360号",
+      "issuing_authority": "中国保险监督管理委员会",
+      "issue_date": "2010-04-08",
+      "effective_date": "2010-04-08",
+      "status": "现行有效",
+      "summary": "要求人身保险公司从2010年起定期报送产品总结报告（季报+年报），明确报告形式、内容、报送要求及截止时间。",
+      "chapter_count": 0,
+      "article_count": 0,
+      "slug": "summary/doc-008-periodic-product-summary-report",
+      "folder": "法规/定期报送产品总结报告通知",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-09",
+      "title": "关于做好2019年产品总结报告的通知",
+      "short_title": "2019产品总结报告通知",
+      "doc_number": "人身险部函〔2020〕27号",
+      "issuing_authority": "中国银保监会人身险部",
+      "issue_date": "2020-02-07",
+      "effective_date": "2020-02-07",
+      "status": "年度性通知",
+      "summary": "对2019年度产品总结报告工作的具体部署，明确8项报告内容和报送截止日。",
+      "chapter_count": 0,
+      "article_count": 0,
+      "slug": "summary/doc-009-2019-product-summary-report",
+      "folder": "法规/2019年产品总结报告通知",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-10",
+      "title": "国家金融监管总局办公厅关于清简报送文件的通知",
+      "short_title": "清简报送文件通知",
+      "doc_number": "金办便函〔2024〕1584号",
+      "issuing_authority": "国家金融监督管理总局办公厅",
+      "issue_date": "2024",
+      "effective_date": "2024",
+      "status": "现行有效",
+      "summary": "为基层减负，清简向总局报送的文件。分为取消类、合并类、调整报送频次/方式/对象类三大类，涵盖省局报送和金融机构报送目录。",
+      "chapter_count": 0,
+      "article_count": 0,
+      "slug": "summary/doc-010-streamlined-submission-notice",
+      "folder": "法规/清简报送文件通知",
+      "is_pilot": false
+    },
+    {
+      "doc_id": "DOC-11",
+      "title": "附：数据指标合规性审核汇总",
+      "short_title": "数据指标合规性审核汇总",
+      "doc_number": "",
+      "issuing_authority": "",
+      "issue_date": "",
+      "effective_date": "",
+      "status": "待确认",
+      "summary": "汇总了多份核心法规中与数据指标合规相关的关键条款，包括产品回溯、附加费用率上限、偿付能力准入等量化指标。",
+      "chapter_count": 0,
+      "article_count": 0,
+      "slug": "summary/doc-011-data-indicators-compliance-summary",
+      "folder": "法规/数据指标合规性审核汇总",
+      "is_pilot": false
+    }
+  ],
+  "clauses": [
+    {
+      "clause_id": "C-0101",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "一条",
+      "title": "立法依据和适用范围",
+      "full_title": "意外险监管办法 第一条条 立法依据和适用范围",
+      "content_summary": "为规范意外伤害保险业务经营活动，保护投保人、被保险人合法权益，根据《中华人民共和国保险法》等法律、行政法规，制定本办法。",
+      "topic_tags": [
+        "总则",
+        "立法依据"
+      ],
+      "slug": "clause/accident-insurance-c-0101",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0102",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "二条",
+      "title": "意外险定义和分类",
+      "full_title": "意外险监管办法 第二条条 意外险定义和分类",
+      "content_summary": "意外伤害保险是指以被保险人因遭受意外伤害造成死亡、残疾为给付保险金条件的人身保险。按投保主体分为个人意外险和团体意外险；按保险期间分为短期意外险和长期意外险。",
+      "topic_tags": [
+        "总则",
+        "定义",
+        "产品分类"
+      ],
+      "slug": "clause/accident-insurance-c-0102",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0103",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "三条",
+      "title": "经营主体",
+      "full_title": "意外险监管办法 第三条条 经营主体",
+      "content_summary": "保险公司经营意外伤害保险业务，应当经银保监会批准。",
+      "topic_tags": [
+        "总则",
+        "经营主体"
+      ],
+      "slug": "clause/accident-insurance-c-0103",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0104",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "五条",
+      "title": "条款和保险费率管理",
+      "full_title": "意外险监管办法 第五条条 条款和保险费率管理",
+      "content_summary": "保险公司总公司负责意外险条款和保险费率的制定、修改和管理。意外险条款和保险费率应当依法报银保监会或其派出机构备案。",
+      "topic_tags": [
+        "产品管理",
+        "条款费率",
+        "备案"
+      ],
+      "slug": "clause/accident-insurance-c-0104",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0105",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "六条",
+      "title": "定价假设要求",
+      "full_title": "意外险监管办法 第六条条 定价假设要求",
+      "content_summary": "保险公司厘定意外险保险费率，应当符合精算原理，定价假设应当谨慎、合理。预定利率、预定发生率、附加费用率等定价假设应当有充分依据。",
+      "topic_tags": [
+        "产品管理",
+        "定价",
+        "精算"
+      ],
+      "slug": "clause/accident-insurance-c-0105",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0106",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "七条",
+      "title": "附加费用率上限",
+      "full_title": "意外险监管办法 第七条条 附加费用率上限",
+      "content_summary": "个人短期意外险附加费用率不得超过35%；个人长期意外险期交不得超过35%、趸交不得超过18%；团体短期意外险不得超过25%；团体长期意外险期交不得超过15%、趸交不得超过8%。",
+      "topic_tags": [
+        "产品管理",
+        "费用率",
+        "定价上限"
+      ],
+      "slug": "clause/accident-insurance-c-0106",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0107",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "八条",
+      "title": "责任准备金计提",
+      "full_title": "意外险监管办法 第八条条 责任准备金计提",
+      "content_summary": "保险公司应当按照规定计提意外险责任准备金，确保偿付能力充足。",
+      "topic_tags": [
+        "产品管理",
+        "准备金",
+        "偿付能力"
+      ],
+      "slug": "clause/accident-insurance-c-0107",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0108",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "九条",
+      "title": "精算报告要求",
+      "full_title": "意外险监管办法 第九条条 精算报告要求",
+      "content_summary": "保险公司报送意外险产品备案时，应当提交精算报告，说明定价基础、定价假设、利润测试等内容。",
+      "topic_tags": [
+        "产品管理",
+        "精算报告",
+        "备案"
+      ],
+      "slug": "clause/accident-insurance-c-0108",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0109",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "十条",
+      "title": "再保安排",
+      "full_title": "意外险监管办法 第十条条 再保安排",
+      "content_summary": "保险公司经营航空意外险等风险集中的意外险业务，应当合理安排再保险，计提特别准备金。航空意外险需单列再保计划。",
+      "topic_tags": [
+        "产品管理",
+        "再保险",
+        "风险管理"
+      ],
+      "slug": "clause/accident-insurance-c-0109",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0110",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "十二条",
+      "title": "销售渠道管理",
+      "full_title": "意外险监管办法 第十二条条 销售渠道管理",
+      "content_summary": "保险公司可以通过保险公司自有渠道、保险中介机构、互联网等渠道销售意外险。委托保险中介机构销售的，应当签订委托协议。",
+      "topic_tags": [
+        "销售管理",
+        "渠道管理"
+      ],
+      "slug": "clause/accident-insurance-c-0110",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0111",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "十三条",
+      "title": "互联网销售",
+      "full_title": "意外险监管办法 第十三条条 互联网销售",
+      "content_summary": "保险公司通过互联网销售意外险的，应当符合互联网人身保险业务监管相关规定。",
+      "topic_tags": [
+        "销售管理",
+        "互联网保险"
+      ],
+      "slug": "clause/accident-insurance-c-0111",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0112",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "十七条",
+      "title": "禁止销售行为",
+      "full_title": "意外险监管办法 第十七条条 禁止销售行为",
+      "content_summary": "禁止以下销售行为：强迫订立保险合同、捆绑销售、无资质机构销售、跨区域委托、夸大宣传、混淆险种、套取资金、预收保费、向非团体成员销售团体保险等。",
+      "topic_tags": [
+        "销售管理",
+        "禁止行为"
+      ],
+      "slug": "clause/accident-insurance-c-0112",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0113",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "十八条",
+      "title": "客户信息真实性",
+      "full_title": "意外险监管办法 第十八条条 客户信息真实性",
+      "content_summary": "保险公司应当加强客户信息真实性管理，对销售及中介机构提供的客户信息进行审核。",
+      "topic_tags": [
+        "销售管理",
+        "客户信息"
+      ],
+      "slug": "clause/accident-insurance-c-0113",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0114",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "二十一条",
+      "title": "费率调整通知",
+      "full_title": "意外险监管办法 第二十一条条 费率调整通知",
+      "content_summary": "一年期及以下意外险产品费率调整的，保险公司应当至少提前30日通知投保人。",
+      "topic_tags": [
+        "信息管理",
+        "费率调整",
+        "通知义务"
+      ],
+      "slug": "clause/accident-insurance-c-0114",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0115",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "二十二条",
+      "title": "年度信息披露",
+      "full_title": "意外险监管办法 第二十二条条 年度信息披露",
+      "content_summary": "保险公司应当于每年4月30日前在公司官方网站信息披露专栏，对上一年度个人意外险业务经营情况进行公开披露。",
+      "topic_tags": [
+        "信息管理",
+        "信息披露"
+      ],
+      "slug": "clause/accident-insurance-c-0115",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0116",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "二十五条",
+      "title": "年度经营情况报告",
+      "full_title": "意外险监管办法 第二十五条条 年度经营情况报告",
+      "content_summary": "保险公司应当于每年3月1日前向银保监会报送上一年度意外险业务经营情况报告。",
+      "topic_tags": [
+        "监督管理",
+        "报告报送"
+      ],
+      "slug": "clause/accident-insurance-c-0116",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0117",
+      "doc_id": "DOC-01",
+      "doc_short_title": "意外险监管办法",
+      "article_number": "三十二条",
+      "title": "施行日期",
+      "full_title": "意外险监管办法 第三十二条条 施行日期",
+      "content_summary": "本办法自2022年1月1日起施行。",
+      "topic_tags": [
+        "附则",
+        "施行日期"
+      ],
+      "slug": "clause/accident-insurance-c-0117",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0201",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "一条",
+      "title": "目的和依据",
+      "full_title": "互联网人身险通知 第一条条 目的和依据",
+      "content_summary": "为进一步规范保险机构互联网人身保险业务，保护投保人、被保险人和受益人合法权益，防范经营风险，根据相关法律法规制定本通知。",
+      "topic_tags": [
+        "总则",
+        "立法依据"
+      ],
+      "slug": "clause/internet-life-insurance-c-0201",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0202",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "二条",
+      "title": "互联网人身保险定义",
+      "full_title": "互联网人身险通知 第二条条 互联网人身保险定义",
+      "content_summary": "互联网人身保险业务是指保险公司通过互联网和自营网络平台、第三方网络平台等，销售人身保险产品、提供保险服务的业务。",
+      "topic_tags": [
+        "总则",
+        "定义"
+      ],
+      "slug": "clause/internet-life-insurance-c-0202",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0203",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "三条",
+      "title": "经营准入条件",
+      "full_title": "互联网人身险通知 第三条条 经营准入条件",
+      "content_summary": "保险公司开展互联网人身保险业务，应当符合：连续四个季度综合偿付能力充足率≥120%、核心偿付能力充足率≥75%、责任准备金覆盖率>100%、风险综合评级B类及以上、公司治理评估C级及以上。",
+      "topic_tags": [
+        "经营条件",
+        "准入条件",
+        "偿付能力"
+      ],
+      "slug": "clause/internet-life-insurance-c-0203",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0204",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "五条",
+      "title": "在线服务标准",
+      "full_title": "互联网人身险通知 第五条条 在线服务标准",
+      "content_summary": "互联网人身保险业务应当提供在线投保、在线承保、在线理赔、在线退保等在线服务。消费者咨询或服务请求接通率不低于95%。",
+      "topic_tags": [
+        "服务标准",
+        "在线服务"
+      ],
+      "slug": "clause/internet-life-insurance-c-0204",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0205",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "六条",
+      "title": "核保理赔时效",
+      "full_title": "互联网人身险通知 第六条条 核保理赔时效",
+      "content_summary": "电子保单自承保后2个工作日内送达；收到完整材料后5个工作日内作出理赔核定，复杂情形可延展至30日；在线退保1个工作日内核定，复杂情形可延展至3个工作日。",
+      "topic_tags": [
+        "服务标准",
+        "时效要求"
+      ],
+      "slug": "clause/internet-life-insurance-c-0205",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0206",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "八条",
+      "title": "可售产品范围",
+      "full_title": "互联网人身险通知 第八条条 可售产品范围",
+      "content_summary": "通过互联网可销售的人身保险产品包括：意外险、健康险（护理险除外）、定期寿险、十年期及以上普通型人寿保险和普通型年金保险。",
+      "topic_tags": [
+        "产品管理",
+        "产品范围"
+      ],
+      "slug": "clause/internet-life-insurance-c-0206",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0207",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "十条",
+      "title": "附加费用率上限",
+      "full_title": "互联网人身险通知 第十条条 附加费用率上限",
+      "content_summary": "互联网人身保险产品的附加费用率应当符合监管规定，在产品备案时列明。",
+      "topic_tags": [
+        "产品管理",
+        "费用率"
+      ],
+      "slug": "clause/internet-life-insurance-c-0207",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0208",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "十一条",
+      "title": "十年期以上产品额外条件",
+      "full_title": "互联网人身险通知 第十一条条 十年期以上产品额外条件",
+      "content_summary": "销售十年期及以上普通型人寿保险和年金保险，还需符合：连续四季度综合偿付能力>150%、核心≥100%、风险评级A类以上、公司治理B级以上。",
+      "topic_tags": [
+        "经营条件",
+        "准入条件",
+        "长期产品"
+      ],
+      "slug": "clause/internet-life-insurance-c-0208",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0209",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "十二条",
+      "title": "中介机构管理",
+      "full_title": "互联网人身险通知 第十二条条 中介机构管理",
+      "content_summary": "保险公司通过全国性保险中介机构销售互联网人身保险产品的，应当加强对中介机构的管理。",
+      "topic_tags": [
+        "销售管理",
+        "中介渠道"
+      ],
+      "slug": "clause/internet-life-insurance-c-0209",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0210",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "十四条",
+      "title": "适当性评估",
+      "full_title": "互联网人身险通知 第十四条条 适当性评估",
+      "content_summary": "保险公司应当于投保前进行适当性评估，向消费者销售与其风险保障需求和支付能力相适应的互联网人身保险产品。",
+      "topic_tags": [
+        "销售管理",
+        "适当性",
+        "消费者保护"
+      ],
+      "slug": "clause/internet-life-insurance-c-0210",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0211",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "十六条",
+      "title": "定价回溯机制",
+      "full_title": "互联网人身险通知 第十六条条 定价回溯机制",
+      "content_summary": "保险公司应当对互联网人身保险业务进行定价回溯，总精算师是回溯工作的直接责任人。回溯报告经董事会审议后报送监管机构。",
+      "topic_tags": [
+        "精算管理",
+        "定价回溯"
+      ],
+      "slug": "clause/internet-life-insurance-c-0211",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0212",
+      "doc_id": "DOC-02",
+      "doc_short_title": "互联网人身险通知",
+      "article_number": "十七条",
+      "title": "信息披露",
+      "full_title": "互联网人身险通知 第十七条条 信息披露",
+      "content_summary": "保险公司应当在公司官网披露互联网人身保险产品信息。定价回溯偏差超过50%的，应当主动披露。",
+      "topic_tags": [
+        "信息披露",
+        "回溯披露"
+      ],
+      "slug": "clause/internet-life-insurance-c-0212",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0601",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "一条",
+      "title": "事后备案和事后抽查",
+      "full_title": "强化产品监管通知 第一条条 事后备案和事后抽查",
+      "content_summary": "人身保险产品实行事后备案和事后抽查制度。除明确要求事前审批的产品外，均实行事后备案，产品销售后10日内备案。",
+      "topic_tags": [
+        "产品监管",
+        "备案管理"
+      ],
+      "slug": "clause/product-regulation-c-0601",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0602",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "二条",
+      "title": "产品退出机制",
+      "full_title": "强化产品监管通知 第二条条 产品退出机制",
+      "content_summary": "建立产品退出机制。对违法违规产品，监管机构有权责令停止使用并公开披露停售信息。年度累计规模保费收入<100万且销售件数<5000件的个人产品，保险公司应当主动停售（产品使用未满一年除外）。",
+      "topic_tags": [
+        "产品监管",
+        "产品退出"
+      ],
+      "slug": "clause/product-regulation-c-0602",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0603",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "三条",
+      "title": "产品问责机制",
+      "full_title": "强化产品监管通知 第三条条 产品问责机制",
+      "content_summary": "建立产品问责机制。总经理、总精算师、法律责任人等对产品违法违规行为承担相应责任。可采取禁止申报新产品（3个月至1年）、约谈、警告、撤销任职资格等处罚措施。",
+      "topic_tags": [
+        "产品监管",
+        "问责机制"
+      ],
+      "slug": "clause/product-regulation-c-0603",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0604",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "四条",
+      "title": "产品回溯机制",
+      "full_title": "强化产品监管通知 第四条条 产品回溯机制",
+      "content_summary": "建立产品回溯机制。保险公司应当定期将产品实际经营情况与定价假设对比，识别偏差并采取改进措施。产品年度总结报告应当包含回溯情况。",
+      "topic_tags": [
+        "产品监管",
+        "定价回溯"
+      ],
+      "slug": "clause/product-regulation-c-0604",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0605",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "五条",
+      "title": "信息披露机制",
+      "full_title": "强化产品监管通知 第五条条 信息披露机制",
+      "content_summary": "建立产品信息披露机制。保险公司应当通过公司官网等渠道披露产品相关信息。",
+      "topic_tags": [
+        "产品监管",
+        "信息披露"
+      ],
+      "slug": "clause/product-regulation-c-0605",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0606",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "六条",
+      "title": "新型产品销售管理",
+      "full_title": "强化产品监管通知 第六条条 新型产品销售管理",
+      "content_summary": "加强新型产品销售管理。新型产品销售应当符合相应监管规定，加强风险提示。",
+      "topic_tags": [
+        "产品监管",
+        "新型产品"
+      ],
+      "slug": "clause/product-regulation-c-0606",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0607",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "七条",
+      "title": "万能险经营管理",
+      "full_title": "强化产品监管通知 第七条条 万能险经营管理",
+      "content_summary": "加强万能保险经营管理。万能险产品应当符合结算利率管理、费用收取等相关规定。",
+      "topic_tags": [
+        "产品监管",
+        "万能险"
+      ],
+      "slug": "clause/product-regulation-c-0607",
+      "page_type": "concept",
+      "category": "条款"
+    },
+    {
+      "clause_id": "C-0608",
+      "doc_id": "DOC-06",
+      "doc_short_title": "强化产品监管通知",
+      "article_number": "八条",
+      "title": "产品开发管理工作组",
+      "full_title": "强化产品监管通知 第八条条 产品开发管理工作组",
+      "content_summary": "保险公司应当建立产品开发管理工作组，由总经理担任组长，产品精算、财务、销售、投资等相关负责人为成员。产品总结报告应当经董事会审议。",
+      "topic_tags": [
+        "产品监管",
+        "组织架构",
+        "报告报送"
+      ],
+      "slug": "clause/product-regulation-c-0608",
+      "page_type": "concept",
+      "category": "条款"
+    }
+  ],
+  "business_objects": [
+    {
+      "obj_id": "BO-01",
+      "name": "意外伤害保险",
+      "name_en": "AccidentInsurance",
+      "description": "以被保险人因遭受意外伤害造成死亡、残疾为给付保险金条件的人身保险。",
+      "slug": "entity/accident-insurance",
+      "aliases": [
+        "意外险"
+      ],
+      "attributes": [
+        {
+          "name": "保险责任",
+          "type": "array<string>",
+          "description": "意外身故、意外伤残、意外医疗等"
+        },
+        {
+          "name": "保险期间",
+          "type": "string",
+          "description": "短期（一年及以下）或长期"
+        },
+        {
+          "name": "投保主体",
+          "type": "string",
+          "description": "个人或团体"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0102",
+        "C-0103"
+      ],
+      "source_docs": [
+        "DOC-01"
+      ],
+      "category": "保险产品"
+    },
+    {
+      "obj_id": "BO-02",
+      "name": "健康保险",
+      "name_en": "HealthInsurance",
+      "description": "以被保险人的健康为保险标的，对因健康原因导致的损失给付保险金的保险。",
+      "slug": "entity/health-insurance",
+      "aliases": [
+        "健康险"
+      ],
+      "attributes": [
+        {
+          "name": "保险责任类型",
+          "type": "enum",
+          "description": "疾病保险、医疗保险、长期护理保险、失能收入损失保险"
+        },
+        {
+          "name": "个税优惠资质",
+          "type": "boolean",
+          "description": "是否为税收优惠型健康保险"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0206"
+      ],
+      "source_docs": [
+        "DOC-02",
+        "DOC-04"
+      ],
+      "category": "保险产品"
+    },
+    {
+      "obj_id": "BO-03",
+      "name": "人寿保险",
+      "name_en": "LifeInsurance",
+      "description": "以被保险人的寿命为保险标的，且以被保险人的生存或死亡为给付条件的人身保险。",
+      "slug": "entity/life-insurance",
+      "aliases": [
+        "寿险"
+      ],
+      "attributes": [
+        {
+          "name": "保险责任",
+          "type": "array<string>",
+          "description": "身故给付、生存给付等"
+        },
+        {
+          "name": "产品类型",
+          "type": "enum",
+          "description": "普通型、分红型、万能型、投资连结型"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0206"
+      ],
+      "source_docs": [
+        "DOC-02",
+        "DOC-07"
+      ],
+      "category": "保险产品"
+    },
+    {
+      "obj_id": "BO-04",
+      "name": "年金保险",
+      "name_en": "AnnuityInsurance",
+      "description": "以被保险人生存为给付保险金条件，并按约定的时间间隔分期给付生存保险金的人身保险。",
+      "slug": "entity/annuity-insurance",
+      "aliases": [
+        "年金险"
+      ],
+      "attributes": [
+        {
+          "name": "领取方式",
+          "type": "enum",
+          "description": "年领、季领、月领、一次性领取"
+        },
+        {
+          "name": "给付起始时间",
+          "type": "string",
+          "description": "即期年金、延期年金"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0206",
+        "C-0208"
+      ],
+      "source_docs": [
+        "DOC-02"
+      ],
+      "category": "保险产品"
+    },
+    {
+      "obj_id": "BO-05",
+      "name": "团体保险",
+      "name_en": "GroupInsurance",
+      "description": "以团体为保险对象，以集体名义投保并由保险人签发一份总的保险合同的保险。",
+      "slug": "entity/group-insurance",
+      "aliases": [
+        "团险"
+      ],
+      "attributes": [
+        {
+          "name": "投保团体类型",
+          "type": "enum",
+          "description": "企业、机关事业单位、社会团体等"
+        },
+        {
+          "name": "最低参保人数",
+          "type": "number",
+          "description": "不少于3人"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0112"
+      ],
+      "source_docs": [
+        "DOC-05",
+        "DOC-01"
+      ],
+      "category": "保险产品"
+    },
+    {
+      "obj_id": "BO-06",
+      "name": "互联网人身保险",
+      "name_en": "InternetLifeInsurance",
+      "description": "通过互联网渠道销售的人身保险产品。",
+      "slug": "entity/internet-life-insurance",
+      "aliases": [
+        "互联网保险"
+      ],
+      "attributes": [
+        {
+          "name": "销售渠道",
+          "type": "string",
+          "description": "互联网"
+        },
+        {
+          "name": "可售险种",
+          "type": "array<string>",
+          "description": "意外险、健康险、定期寿险、十年期以上普通型寿险和年金险"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0202",
+        "C-0203",
+        "C-0206"
+      ],
+      "source_docs": [
+        "DOC-02"
+      ],
+      "category": "保险产品"
+    },
+    {
+      "obj_id": "BO-07",
+      "name": "预定利率",
+      "name_en": "PricingInterestRate",
+      "description": "保险产品定价时假设的利率，是计算保险费的重要参数。",
+      "slug": "entity/pricing-interest-rate",
+      "aliases": [
+        "定价利率"
+      ],
+      "attributes": [
+        {
+          "name": "数值",
+          "type": "number",
+          "unit": "%",
+          "description": "预定利率的具体数值"
+        },
+        {
+          "name": "适用产品",
+          "type": "array<string>",
+          "description": "适用的保险产品类型"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0105",
+        "C-0106"
+      ],
+      "source_docs": [
+        "DOC-01"
+      ],
+      "category": "定价参数"
+    },
+    {
+      "obj_id": "BO-08",
+      "name": "附加费用率",
+      "name_en": "LoadingExpenseRatio",
+      "description": "保险产品定价中附加费用占保费的比例，分为个人/团体、短期/长期、期交/趸交等不同上限。",
+      "slug": "entity/loading-expense-ratio",
+      "aliases": [
+        "费用率"
+      ],
+      "attributes": [
+        {
+          "name": "个人短期上限",
+          "type": "number",
+          "unit": "%",
+          "default": "35",
+          "description": "个人短期意外险附加费用率上限"
+        },
+        {
+          "name": "团体短期上限",
+          "type": "number",
+          "unit": "%",
+          "default": "25",
+          "description": "团体短期意外险附加费用率上限"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0106",
+        "C-0207"
+      ],
+      "source_docs": [
+        "DOC-01",
+        "DOC-02"
+      ],
+      "category": "定价参数"
+    },
+    {
+      "obj_id": "BO-09",
+      "name": "综合偿付能力充足率",
+      "name_en": "ComprehensiveSolvencyRatio",
+      "description": "衡量保险公司偿付能力的核心指标，是多项业务准入的门槛条件。",
+      "slug": "entity/comprehensive-solvency-ratio",
+      "aliases": [
+        "偿付能力充足率"
+      ],
+      "attributes": [
+        {
+          "name": "互联网人身险门槛",
+          "type": "number",
+          "unit": "%",
+          "default": "120",
+          "description": "互联网人身保险业务准入要求"
+        },
+        {
+          "name": "十年期以上产品门槛",
+          "type": "number",
+          "unit": "%",
+          "default": "150",
+          "description": "十年期以上普通型寿险/年金险更高门槛"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0203",
+        "C-0208"
+      ],
+      "source_docs": [
+        "DOC-02"
+      ],
+      "category": "监管指标"
+    },
+    {
+      "obj_id": "BO-10",
+      "name": "定价回溯机制",
+      "name_en": "PricingReviewMechanism",
+      "description": "保险公司定期将产品实际经营情况与定价假设对比，识别偏差并采取措施的监管机制。",
+      "slug": "entity/pricing-review-mechanism",
+      "aliases": [
+        "产品回溯",
+        "回溯机制"
+      ],
+      "attributes": [
+        {
+          "name": "短期险指标",
+          "type": "array<string>",
+          "description": "再保后赔付率、费用率"
+        },
+        {
+          "name": "长期险指标",
+          "type": "array<string>",
+          "description": "发生率、费用率、退保率、投资收益率"
+        },
+        {
+          "name": "偏差公式",
+          "type": "string",
+          "description": "R_k = |实际经营情况 / 精算假设k - 1|"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0211",
+        "C-0604"
+      ],
+      "source_docs": [
+        "DOC-03",
+        "DOC-02",
+        "DOC-06"
+      ],
+      "category": "监管机制"
+    },
+    {
+      "obj_id": "BO-11",
+      "name": "总精算师",
+      "name_en": "ChiefActuary",
+      "description": "保险公司高级管理人员，对产品定价和精算工作负有直接责任。",
+      "slug": "entity/chief-actuary",
+      "aliases": [],
+      "attributes": [
+        {
+          "name": "职责",
+          "type": "array<string>",
+          "description": "产品精算审核、定价回溯直接责任人"
+        },
+        {
+          "name": "问责关系",
+          "type": "string",
+          "description": "产品违法违规时承担相应责任"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0211",
+        "C-0603"
+      ],
+      "source_docs": [
+        "DOC-02",
+        "DOC-06"
+      ],
+      "category": "关键角色"
+    },
+    {
+      "obj_id": "BO-12",
+      "name": "产品备案",
+      "name_en": "ProductFiling",
+      "description": "保险产品向监管机构备案的管理制度，实行事后备案和事后抽查制度。",
+      "slug": "entity/product-filing",
+      "aliases": [
+        "备案管理",
+        "事后备案"
+      ],
+      "attributes": [
+        {
+          "name": "备案方式",
+          "type": "enum",
+          "description": "事前审批、事后备案"
+        },
+        {
+          "name": "备案时限",
+          "type": "string",
+          "default": "销售后10日内",
+          "description": "事后备案的时限要求"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0104",
+        "C-0108",
+        "C-0601"
+      ],
+      "source_docs": [
+        "DOC-01",
+        "DOC-06"
+      ],
+      "category": "监管机制"
+    },
+    {
+      "obj_id": "BO-13",
+      "name": "产品退出机制",
+      "name_en": "ProductExitMechanism",
+      "description": "保险产品退出市场的制度，包括主动停售和责令停售。",
+      "slug": "entity/product-exit-mechanism",
+      "aliases": [
+        "产品停售"
+      ],
+      "attributes": [
+        {
+          "name": "退出方式",
+          "type": "enum",
+          "description": "主动停售、责令停售、到期终止"
+        },
+        {
+          "name": "主动停售条件",
+          "type": "string",
+          "description": "年度保费<100万且件数<5000件（产品使用未满一年除外）"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0602"
+      ],
+      "source_docs": [
+        "DOC-06"
+      ],
+      "category": "监管机制"
+    },
+    {
+      "obj_id": "BO-14",
+      "name": "产品问责机制",
+      "name_en": "ProductAccountabilityMechanism",
+      "description": "对产品违法违规行为追究相关责任人责任的监管制度。",
+      "slug": "entity/product-accountability-mechanism",
+      "aliases": [
+        "问责制"
+      ],
+      "attributes": [
+        {
+          "name": "问责对象",
+          "type": "array<string>",
+          "description": "总经理、总精算师、法律责任人等"
+        },
+        {
+          "name": "处罚措施",
+          "type": "array<string>",
+          "description": "禁止申报新产品（3个月至1年）、约谈、警告、撤销任职资格等"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0603"
+      ],
+      "source_docs": [
+        "DOC-06"
+      ],
+      "category": "监管机制"
+    },
+    {
+      "obj_id": "BO-15",
+      "name": "再保险",
+      "name_en": "Reinsurance",
+      "description": "保险公司将其承担的保险业务部分转移给其他保险公司，用于分散风险。",
+      "slug": "entity/reinsurance",
+      "aliases": [
+        "再保"
+      ],
+      "attributes": [
+        {
+          "name": "再保方式",
+          "type": "enum",
+          "description": "比例再保险、非比例再保险"
+        },
+        {
+          "name": "特别准备金",
+          "type": "string",
+          "description": "航空意外险等需计提特别准备金"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0109"
+      ],
+      "source_docs": [
+        "DOC-01"
+      ],
+      "category": "风险管理"
+    },
+    {
+      "obj_id": "BO-16",
+      "name": "信息披露",
+      "name_en": "InformationDisclosure",
+      "description": "保险公司按规定向监管机构或社会公众披露业务信息的制度。",
+      "slug": "entity/information-disclosure",
+      "aliases": [
+        "披露"
+      ],
+      "attributes": [
+        {
+          "name": "披露类型",
+          "type": "enum",
+          "description": "向监管报送、向社会公开、向客户告知"
+        },
+        {
+          "name": "意外险年度披露时间",
+          "type": "string",
+          "default": "每年4月30日前",
+          "description": "个人意外险年度经营情况披露时限"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0115",
+        "C-0212",
+        "C-0605"
+      ],
+      "source_docs": [
+        "DOC-01",
+        "DOC-02",
+        "DOC-06"
+      ],
+      "category": "监管机制"
+    },
+    {
+      "obj_id": "BO-17",
+      "name": "适当性评估",
+      "name_en": "SuitabilityAssessment",
+      "description": "互联网人身保险业务中，投保前对消费者进行的风险保障需求和支付能力评估。",
+      "slug": "entity/suitability-assessment",
+      "aliases": [
+        "适当性管理"
+      ],
+      "attributes": [
+        {
+          "name": "适用场景",
+          "type": "string",
+          "description": "互联网人身保险投保前"
+        },
+        {
+          "name": "目的",
+          "type": "string",
+          "description": "销售与消费者需求和支付能力相适应的产品"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0210"
+      ],
+      "source_docs": [
+        "DOC-02"
+      ],
+      "category": "消费者保护"
+    },
+    {
+      "obj_id": "BO-18",
+      "name": "保险中介机构",
+      "name_en": "InsuranceIntermediary",
+      "description": "从事保险代理、保险经纪等保险中介业务的机构。",
+      "slug": "entity/insurance-intermediary",
+      "aliases": [
+        "保险中介",
+        "中介机构"
+      ],
+      "attributes": [
+        {
+          "name": "中介类型",
+          "type": "enum",
+          "description": "保险专业中介、保险兼业代理、保险代理人、保险经纪人"
+        },
+        {
+          "name": "资质要求",
+          "type": "string",
+          "description": "需符合相应资质要求，与保险公司签订委托协议"
+        }
+      ],
+      "appearing_clauses": [
+        "C-0110",
+        "C-0209"
+      ],
+      "source_docs": [
+        "DOC-01",
+        "DOC-02"
+      ],
+      "category": "机构主体"
+    }
+  ],
+  "relations": [
+    {
+      "source_slug": "clause/accident-insurance-c-0101",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0102",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0103",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0104",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0105",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0106",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0107",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0108",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0109",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0110",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0111",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0112",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0113",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0114",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0115",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0116",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/accident-insurance-c-0117",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《意外伤害保险业务监管办法》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0201",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0202",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0203",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0204",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0205",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0206",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0207",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0208",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0209",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0210",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0211",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/internet-life-insurance-c-0212",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《关于进一步规范保险机构互联网人身保险业务有关事项的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0601",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0602",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0603",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0604",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0605",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0606",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0607",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "clause/product-regulation-c-0608",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "from_document",
+      "relation_label": "来自",
+      "reverse_label": "包含条款",
+      "description": "该条款来自《中国保监会关于强化人身保险产品监管工作的通知》",
+      "source_page_type": "concept",
+      "target_page_type": "summary",
+      "confidence": 1.0
+    },
+    {
+      "source_slug": "entity/accident-insurance",
+      "target_slug": "clause/accident-insurance-c-0102",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0102条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/accident-insurance",
+      "target_slug": "clause/accident-insurance-c-0103",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0103条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/health-insurance",
+      "target_slug": "clause/internet-life-insurance-c-0206",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0206条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/life-insurance",
+      "target_slug": "clause/internet-life-insurance-c-0206",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0206条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/annuity-insurance",
+      "target_slug": "clause/internet-life-insurance-c-0206",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0206条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/annuity-insurance",
+      "target_slug": "clause/internet-life-insurance-c-0208",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0208条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/group-insurance",
+      "target_slug": "clause/accident-insurance-c-0112",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0112条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/internet-life-insurance",
+      "target_slug": "clause/internet-life-insurance-c-0202",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0202条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/internet-life-insurance",
+      "target_slug": "clause/internet-life-insurance-c-0203",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0203条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/internet-life-insurance",
+      "target_slug": "clause/internet-life-insurance-c-0206",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0206条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-interest-rate",
+      "target_slug": "clause/accident-insurance-c-0105",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0105条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-interest-rate",
+      "target_slug": "clause/accident-insurance-c-0106",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0106条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/loading-expense-ratio",
+      "target_slug": "clause/accident-insurance-c-0106",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0106条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/loading-expense-ratio",
+      "target_slug": "clause/internet-life-insurance-c-0207",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0207条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/comprehensive-solvency-ratio",
+      "target_slug": "clause/internet-life-insurance-c-0203",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0203条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/comprehensive-solvency-ratio",
+      "target_slug": "clause/internet-life-insurance-c-0208",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0208条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-review-mechanism",
+      "target_slug": "clause/internet-life-insurance-c-0211",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0211条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-review-mechanism",
+      "target_slug": "clause/product-regulation-c-0604",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0604条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/chief-actuary",
+      "target_slug": "clause/internet-life-insurance-c-0211",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0211条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/chief-actuary",
+      "target_slug": "clause/product-regulation-c-0603",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0603条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-filing",
+      "target_slug": "clause/accident-insurance-c-0104",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0104条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-filing",
+      "target_slug": "clause/accident-insurance-c-0108",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0108条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-filing",
+      "target_slug": "clause/product-regulation-c-0601",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0601条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-exit-mechanism",
+      "target_slug": "clause/product-regulation-c-0602",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0602条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-accountability-mechanism",
+      "target_slug": "clause/product-regulation-c-0603",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0603条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/reinsurance",
+      "target_slug": "clause/accident-insurance-c-0109",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0109条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/information-disclosure",
+      "target_slug": "clause/accident-insurance-c-0115",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0115条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/information-disclosure",
+      "target_slug": "clause/internet-life-insurance-c-0212",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0212条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/information-disclosure",
+      "target_slug": "clause/product-regulation-c-0605",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0605条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/suitability-assessment",
+      "target_slug": "clause/internet-life-insurance-c-0210",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0210条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/insurance-intermediary",
+      "target_slug": "clause/accident-insurance-c-0110",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0110条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/insurance-intermediary",
+      "target_slug": "clause/internet-life-insurance-c-0209",
+      "relation_type": "defined_in",
+      "relation_label": "规定于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在C-0209条款中有明确规定或提及",
+      "source_page_type": "entity",
+      "target_page_type": "concept",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/accident-insurance",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/health-insurance",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/health-insurance",
+      "target_slug": "summary/doc-004-tax-preferential-health-insurance",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《国家金融监督管理总局关于适用商业健康保险个人所得税优惠政策产品有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/life-insurance",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/life-insurance",
+      "target_slug": "summary/doc-007-liability-conversion-pilot",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国银保监会办公厅关于开展人寿保险与长期护理保险责任转换业务试点的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/annuity-insurance",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/group-insurance",
+      "target_slug": "summary/doc-005-group-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国保监会关于促进团体保险健康发展有关问题的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/group-insurance",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/internet-life-insurance",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-interest-rate",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/loading-expense-ratio",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/loading-expense-ratio",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/comprehensive-solvency-ratio",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-review-mechanism",
+      "target_slug": "summary/doc-003-pricing-review-pilot-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于试运行互联网人身保险业务定价回溯机制的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-review-mechanism",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/pricing-review-mechanism",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国保监会关于强化人身保险产品监管工作的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/chief-actuary",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/chief-actuary",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国保监会关于强化人身保险产品监管工作的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-filing",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-filing",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国保监会关于强化人身保险产品监管工作的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-exit-mechanism",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国保监会关于强化人身保险产品监管工作的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/product-accountability-mechanism",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国保监会关于强化人身保险产品监管工作的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/reinsurance",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/information-disclosure",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/information-disclosure",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/information-disclosure",
+      "target_slug": "summary/doc-006-strengthen-product-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《中国保监会关于强化人身保险产品监管工作的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/suitability-assessment",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/insurance-intermediary",
+      "target_slug": "summary/doc-001-accident-insurance-regulation",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《意外伤害保险业务监管办法》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    },
+    {
+      "source_slug": "entity/insurance-intermediary",
+      "target_slug": "summary/doc-002-internet-life-insurance-notice",
+      "relation_type": "mentioned_in",
+      "relation_label": "涉及于",
+      "reverse_label": "涉及业务对象",
+      "description": "该业务对象在《关于进一步规范保险机构互联网人身保险业务有关事项的通知》中有涉及",
+      "source_page_type": "entity",
+      "target_page_type": "summary",
+      "confidence": 0.9
+    }
+  ],
+  "statistics": {
+    "regulation_count": 11,
+    "clause_count": 37,
+    "business_object_count": 18,
+    "total_entities": 66,
+    "relation_count": 98,
+    "pilot_docs": [
+      "DOC-01",
+      "DOC-02",
+      "DOC-06"
+    ],
+    "note": "DOC-03~DOC-11仅做了法规层框架，条款和业务对象需后续补充"
+  }
+}

@@ -2991,6 +2991,7 @@ export default {
       selectPageHint: 'Select a page from the left to view its content',
       version: 'v{ver}',
       aliases: 'Aliases',
+      aliasInputPlaceholder: 'Add alias, press Enter to confirm',
       linkedFrom: 'Linked from',
       sources: 'Source documents',
       graphEmpty: 'Loading graph...',

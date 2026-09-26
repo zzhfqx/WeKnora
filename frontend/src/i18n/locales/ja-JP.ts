@@ -2991,6 +2991,7 @@ export default {
       selectPageHint: '左側からページを選択すると内容が表示されます',
       version: 'v{ver}',
       aliases: '別名',
+      aliasInputPlaceholder: '別名を追加、Enterで確定',
       linkedFrom: 'リンク元',
       sources: '出典ドキュメント',
       graphEmpty: 'グラフを読み込み中...',

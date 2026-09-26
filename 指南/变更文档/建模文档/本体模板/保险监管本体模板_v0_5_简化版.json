@@ -1,0 +1,658 @@
+{
+  "ontology": {
+    "level_1": [
+      {
+        "id": "L1-01",
+        "name": "保险",
+        "description": "保险产品及保险业务相关实体",
+        "source_refs": [
+          "全部11份文档"
+        ],
+        "level_2": [
+          {
+            "id": "L2-0101",
+            "name": "意外伤害保险类",
+            "description": "以被保险人因遭受意外伤害造成死亡、残疾为给付条件的人身保险",
+            "source_refs": [
+              "DOC-01 意外伤害保险业务监管办法"
+            ],
+            "core_attributes": [
+              {
+                "name": "保险责任",
+                "description": "意外身故、意外伤残、意外医疗等保障责任范围",
+                "source_refs": [
+                  "DOC-01 第二条"
+                ]
+              },
+              {
+                "name": "定价要素",
+                "description": "预定利率、预定发生率、附加费用率等定价参数",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ]
+              },
+              {
+                "name": "再保安排",
+                "description": "航空意外险等特定产品的再保险计划和特别准备金要求",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ]
+              },
+              {
+                "name": "信息披露要求",
+                "description": "每年4月30日前披露上一年度个人意外险经营情况",
+                "source_refs": [
+                  "DOC-01 第二十二条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0102",
+            "name": "健康保险类",
+            "description": "以被保险人健康为保险标的，对健康原因导致的损失给付保险金的保险，含疾病保险、医疗保险、长期护理保险等",
+            "source_refs": [
+              "DOC-04 个税优惠健康险通知",
+              "DOC-02 第（八）条"
+            ],
+            "core_attributes": [
+              {
+                "name": "保险责任类型",
+                "description": "疾病保险、医疗保险、长期护理保险、失能收入损失保险",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ]
+              },
+              {
+                "name": "个税优惠资质",
+                "description": "是否为税收优惠型健康保险产品及经营准入条件",
+                "source_refs": [
+                  "DOC-04 第二条、第三条"
+                ]
+              },
+              {
+                "name": "万能账户",
+                "description": "个税优惠健康险采取万能险方式，包含医疗保险和个人账户积累",
+                "source_refs": [
+                  "DOC-04 第二条"
+                ]
+              },
+              {
+                "name": "责任转换试点",
+                "description": "人寿保险可转换为长期护理保险责任（试点）",
+                "source_refs": [
+                  "DOC-07 第（一）条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0103",
+            "name": "人寿保险类",
+            "description": "以被保险人寿命为保险标的，以生存或死亡为给付条件的人身保险",
+            "source_refs": [
+              "DOC-02 第（八）条"
+            ],
+            "core_attributes": [
+              {
+                "name": "保险责任",
+                "description": "身故给付、生存给付等保险责任",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ]
+              },
+              {
+                "name": "定价要素",
+                "description": "预定利率、预定死亡率、预定费用率等定价参数",
+                "source_refs": [
+                  "DOC-02"
+                ]
+              },
+              {
+                "name": "长期险回溯指标",
+                "description": "发生率、费用率、退保率、投资收益率",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ]
+              },
+              {
+                "name": "十年期以上准入条件",
+                "description": "通过互联网销售十年期以上普通型寿险的额外资质要求",
+                "source_refs": [
+                  "DOC-02 第（十一）条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0104",
+            "name": "年金保险类",
+            "description": "以被保险人生存为给付条件，按约定时间间隔分期给付生存保险金的人身保险",
+            "source_refs": [
+              "DOC-02 第（八）条"
+            ],
+            "core_attributes": [
+              {
+                "name": "保险责任",
+                "description": "生存年金给付、身故保险金等",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ]
+              },
+              {
+                "name": "领取方式",
+                "description": "年领、季领、月领、一次性领取等",
+                "source_refs": [
+                  "DOC-02"
+                ]
+              },
+              {
+                "name": "长期险回溯指标",
+                "description": "发生率、费用率、退保率、投资收益率",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ]
+              },
+              {
+                "name": "十年期以上准入条件",
+                "description": "通过互联网销售十年期以上普通型年金的额外资质要求",
+                "source_refs": [
+                  "DOC-02 第（十一）条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0105",
+            "name": "互联网人身保险类",
+            "description": "通过互联网渠道销售的人身保险产品，含意外险、健康险、寿险、年金险",
+            "source_refs": [
+              "DOC-02 互联网人身保险通知"
+            ],
+            "core_attributes": [
+              {
+                "name": "经营准入条件",
+                "description": "偿付能力、风险评级、公司治理等准入要求",
+                "source_refs": [
+                  "DOC-02 第（三）条"
+                ]
+              },
+              {
+                "name": "可售险种范围",
+                "description": "通过互联网可销售的人身保险险种范围",
+                "source_refs": [
+                  "DOC-02 第（八）条"
+                ]
+              },
+              {
+                "name": "在线服务标准",
+                "description": "咨询接通率、电子保单送达时效、理赔核定时效等",
+                "source_refs": [
+                  "DOC-02 第（六）条"
+                ]
+              },
+              {
+                "name": "适当性评估",
+                "description": "投保前进行适当性评估，销售与需求相适应的产品",
+                "source_refs": [
+                  "DOC-02 第（十四）条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0106",
+            "name": "团体保险类",
+            "description": "以团体为保险对象，以集体名义投保的保险",
+            "source_refs": [
+              "DOC-05 团体保险业务通知"
+            ],
+            "core_attributes": [
+              {
+                "name": "投保团体类型",
+                "description": "企业、机关事业单位、社会团体等",
+                "source_refs": [
+                  "DOC-05"
+                ]
+              },
+              {
+                "name": "参保条件",
+                "description": "最低参保人数要求、参保比例要求",
+                "source_refs": [
+                  "DOC-05"
+                ]
+              },
+              {
+                "name": "禁止行为",
+                "description": "向非团体成员销售、虚构团体、套取费用等",
+                "source_refs": [
+                  "DOC-05"
+                ]
+              },
+              {
+                "name": "信息告知要求",
+                "description": "向被保险人明确告知其保险权益",
+                "source_refs": [
+                  "DOC-05"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0107",
+            "name": "产品开发管理类",
+            "description": "保险产品的设计开发、定价、条款制定、审批备案、退出等全生命周期管理",
+            "source_refs": [
+              "DOC-06 强化产品监管通知",
+              "DOC-01 第二章"
+            ],
+            "core_attributes": [
+              {
+                "name": "备案方式",
+                "description": "事前审批、事后备案（默认）",
+                "source_refs": [
+                  "DOC-06 第一条"
+                ]
+              },
+              {
+                "name": "备案时限",
+                "description": "产品销售后10日内备案",
+                "source_refs": [
+                  "DOC-06 第一条"
+                ]
+              },
+              {
+                "name": "产品退出机制",
+                "description": "主动停售和责令停售的条件和程序",
+                "source_refs": [
+                  "DOC-06 第二条"
+                ]
+              },
+              {
+                "name": "精算报告要求",
+                "description": "产品备案需提交的精算报告内容",
+                "source_refs": [
+                  "DOC-01 第七条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0108",
+            "name": "精算管理类",
+            "description": "产品定价、准备金评估、偿付能力评估、定价回溯等精算相关管理",
+            "source_refs": [
+              "DOC-03 定价回溯通知",
+              "DOC-01 第六条、第九条"
+            ],
+            "core_attributes": [
+              {
+                "name": "定价假设",
+                "description": "利率假设、发生率假设、费用假设、退保率假设等",
+                "source_refs": [
+                  "DOC-03 第二条"
+                ]
+              },
+              {
+                "name": "定价回溯机制",
+                "description": "定期将实际经营与定价假设对比，识别偏差并采取措施",
+                "source_refs": [
+                  "DOC-03 第二条"
+                ]
+              },
+              {
+                "name": "偏差分级标准",
+                "description": "予以关注（10%-30%）、调整改进（30%-50%）、主动报告（50%+）",
+                "source_refs": [
+                  "DOC-03 第二条第（三）项"
+                ]
+              },
+              {
+                "name": "总精算师责任",
+                "description": "对产品定价和回溯工作负有直接责任",
+                "source_refs": [
+                  "DOC-02 第（十六）条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0109",
+            "name": "销售管理类",
+            "description": "保险产品销售活动及其管理，含渠道管理、销售行为规范、佣金管理",
+            "source_refs": [
+              "DOC-01 第三章",
+              "DOC-02 第（十二）（十四）条"
+            ],
+            "core_attributes": [
+              {
+                "name": "销售渠道",
+                "description": "互联网、保险中介、银行、直销、团体直销、激活注册式",
+                "source_refs": [
+                  "DOC-01 第三章",
+                  "DOC-02"
+                ]
+              },
+              {
+                "name": "禁止销售行为",
+                "description": "强迫订立合同、捆绑销售、无资质销售、跨区域委托等",
+                "source_refs": [
+                  "DOC-01 第十七条"
+                ]
+              },
+              {
+                "name": "客户信息真实性",
+                "description": "对销售及中介机构提供的客户信息进行审核",
+                "source_refs": [
+                  "DOC-01 第十八条"
+                ]
+              },
+              {
+                "name": "中介机构资质",
+                "description": "销售保险产品的中介机构需符合相应资质要求",
+                "source_refs": [
+                  "DOC-01 第十二条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0110",
+            "name": "再保险业务类",
+            "description": "保险公司将承担的保险业务部分转移给其他保险公司，用于分散风险",
+            "source_refs": [
+              "DOC-01 第六条、第十条",
+              "DOC-03 第二条"
+            ],
+            "core_attributes": [
+              {
+                "name": "再保方式",
+                "description": "比例再保险、非比例再保险",
+                "source_refs": [
+                  "DOC-01"
+                ]
+              },
+              {
+                "name": "再保后赔付率",
+                "description": "再保险后的赔付率，为定价回溯核心指标之一",
+                "source_refs": [
+                  "DOC-03 第二条第（二）项"
+                ]
+              },
+              {
+                "name": "再保计划要求",
+                "description": "航空意外险等需单列再保计划",
+                "source_refs": [
+                  "DOC-01 第六条"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L1-02",
+        "name": "金融监管",
+        "description": "金融监管领域相关实体，含监管机构、被监管机构、监管措施、监管报告",
+        "source_refs": [
+          "全部11份文档"
+        ],
+        "level_2": [
+          {
+            "id": "L2-0201",
+            "name": "监管机构类",
+            "description": "依法对保险行业行使监管职权的政府机构",
+            "source_refs": [
+              "各法规文件发布主体",
+              "DOC-01 第五章"
+            ],
+            "core_attributes": [
+              {
+                "name": "监管层级",
+                "description": "国家级、省局级（银保监局）、分局级",
+                "source_refs": [
+                  "DOC-01 第二十四条"
+                ]
+              },
+              {
+                "name": "机构沿革",
+                "description": "中国保监会 → 中国银保监会 → 国家金融监督管理总局",
+                "source_refs": [
+                  "各文件发布机构名称变化"
+                ]
+              },
+              {
+                "name": "主要职责",
+                "description": "保险行业监督管理职能",
+                "source_refs": [
+                  "DOC-01 第五章"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0202",
+            "name": "被监管机构类",
+            "description": "接受监管机构监督管理的机构，含人身保险公司、保险中介机构",
+            "source_refs": [
+              "DOC-01 第二条",
+              "DOC-02 第（一）条",
+              "DOC-06 第三条"
+            ],
+            "core_attributes": [
+              {
+                "name": "机构类型",
+                "description": "人身保险公司、保险中介机构等",
+                "source_refs": [
+                  "DOC-01 第二条",
+                  "DOC-02 第（一）条"
+                ]
+              },
+              {
+                "name": "偿付能力指标",
+                "description": "综合偿付能力充足率、核心偿付能力充足率",
+                "source_refs": [
+                  "DOC-02 第（三）条"
+                ]
+              },
+              {
+                "name": "风险监管评级",
+                "description": "风险综合评级（A/B/C/D类）、公司治理评估等级",
+                "source_refs": [
+                  "DOC-02 第（三）条"
+                ]
+              },
+              {
+                "name": "高级管理人员",
+                "description": "总经理、总精算师、法律责任人及其职责",
+                "source_refs": [
+                  "DOC-06 第三条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0203",
+            "name": "监管措施类",
+            "description": "监管机构对被监管机构采取的监督管理措施",
+            "source_refs": [
+              "DOC-06 第一条、第二条、第三条",
+              "DOC-10 清简报送通知"
+            ],
+            "core_attributes": [
+              {
+                "name": "备案管理",
+                "description": "事前审批、事后备案等备案管理方式",
+                "source_refs": [
+                  "DOC-06 第一条"
+                ]
+              },
+              {
+                "name": "产品问责",
+                "description": "对产品违法违规行为追究相关责任人责任",
+                "source_refs": [
+                  "DOC-06 第三条"
+                ]
+              },
+              {
+                "name": "处罚措施",
+                "description": "禁止申报新产品、约谈、警告、撤销任职资格等",
+                "source_refs": [
+                  "DOC-06 第三条"
+                ]
+              },
+              {
+                "name": "清简报送",
+                "description": "取消报送、合并报送、调整报送频次",
+                "source_refs": [
+                  "DOC-10"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0204",
+            "name": "监管报告类",
+            "description": "被监管机构按规定向监管机构报送的各类报告",
+            "source_refs": [
+              "DOC-08 定期报送产品总结报告通知",
+              "DOC-09 2019年产品总结报告通知"
+            ],
+            "core_attributes": [
+              {
+                "name": "报告类型",
+                "description": "产品总结报告、产品回溯报告、经营情况报告、试点进展报告",
+                "source_refs": [
+                  "DOC-08",
+                  "DOC-06 第四条"
+                ]
+              },
+              {
+                "name": "报送频率",
+                "description": "年度、季度、半年度、月度、一次性",
+                "source_refs": [
+                  "DOC-08"
+                ]
+              },
+              {
+                "name": "报送时限",
+                "description": "各类报告的报送截止时间",
+                "source_refs": [
+                  "DOC-08",
+                  "DOC-09"
+                ]
+              },
+              {
+                "name": "报告内容要求",
+                "description": "产品结构、合规情况、经营情况、产品退出、回溯情况等",
+                "source_refs": [
+                  "DOC-06 第四条"
+                ]
+              }
+            ]
+          },
+          {
+            "id": "L2-0205",
+            "name": "偿付能力监管类",
+            "description": "以偿付能力充足率为核心的保险公司风险监管制度",
+            "source_refs": [
+              "DOC-02 第（三）（十一）条"
+            ],
+            "core_attributes": [
+              {
+                "name": "综合偿付能力充足率",
+                "description": "综合偿付能力充足率及各业务准入门槛",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ]
+              },
+              {
+                "name": "核心偿付能力充足率",
+                "description": "核心偿付能力充足率及各业务准入门槛",
+                "source_refs": [
+                  "DOC-02 第（三）（十一）条"
+                ]
+              },
+              {
+                "name": "责任准备金覆盖率",
+                "description": "责任准备金覆盖率要求",
+                "source_refs": [
+                  "DOC-02 第（三）条"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "L1-03",
+        "name": "监管法规",
+        "description": "监管法规文件相关实体",
+        "source_refs": [
+          "DOC-01 至 DOC-11"
+        ],
+        "level_2": [
+          {
+            "id": "L2-0301",
+            "name": "规范性文件类",
+            "description": "监管机构发布的各类规范性文件，是保险监管的法规依据",
+            "source_refs": [
+              "DOC-01 至 DOC-11"
+            ],
+            "core_attributes": [
+              {
+                "name": "文件名称",
+                "description": "法规文件的完整名称",
+                "source_refs": [
+                  "全部文档"
+                ]
+              },
+              {
+                "name": "文号",
+                "description": "法规文件的发文字号",
+                "source_refs": [
+                  "全部文档"
+                ]
+              },
+              {
+                "name": "发布机构",
+                "description": "发布该文件的监管机构",
+                "source_refs": [
+                  "全部文档"
+                ]
+              },
+              {
+                "name": "发布日期",
+                "description": "文件发布日期",
+                "source_refs": [
+                  "全部文档"
+                ]
+              },
+              {
+                "name": "效力状态",
+                "description": "现行有效、已废止、试点中等",
+                "source_refs": [
+                  "各文档状态"
+                ]
+              },
+              {
+                "name": "适用对象",
+                "description": "该文件适用的机构或对象范围",
+                "source_refs": [
+                  "各文档开头适用范围"
+                ]
+              },
+              {
+                "name": "废止文件",
+                "description": "本文件废止的旧文件列表",
+                "source_refs": [
+                  "多份文档末尾废止条款"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

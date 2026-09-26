@@ -3993,6 +3993,7 @@ export default {
       selectPageHint: '왼쪽에서 페이지를 선택하여 내용을 확인하세요',
       version: 'v{ver}',
       aliases: '별칭',
+      aliasInputPlaceholder: '별칭을 추가하려면 Enter를 누르세요',
       linkedFrom: '링크 출처',
       sources: '원본 문서',
       graphEmpty: '그래프 로딩 중...',
