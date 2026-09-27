@@ -964,10 +964,50 @@ async function loadPageRelations(slug: string, pageType: string) {
   }
 }
 
-// 页面切换时加载关系
-watch(selectedPage, (page) => {
+// 预加载 in_links / out_links 中未知 slug 对应的页面信息，
+// 保证 slugDisplayName 能显示页面标题而不是 slug。
+async function preloadLinkedPageTitles(page: WikiPage, extraSlugs: string[] = []) {
+  const allSlugs = new Set<string>()
+  ;(page.in_links || []).forEach(s => allSlugs.add(s))
+  ;(page.out_links || []).forEach(s => allSlugs.add(s))
+  extraSlugs.forEach(s => allSlugs.add(s))
+
+  // 过滤掉已在 pages.value 中的 slug
+  const knownSlugs = new Set(pages.value.map(p => p.slug))
+  const unknownSlugs = [...allSlugs].filter(s => !knownSlugs.has(s))
+  if (unknownSlugs.length === 0) return
+
+  // 并发请求未知页面的基本信息，加入 pages.value
+  try {
+    const results = await Promise.allSettled(
+      unknownSlugs.map(slug => getWikiPage(props.knowledgeBaseId, slug))
+    )
+    const seen = new Set(pages.value.map(p => p.id))
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const data = (result.value as any)?.data || result.value
+        if (data && data.slug && !seen.has(data.id)) {
+          pages.value.push(data as WikiPage)
+          seen.add(data.id)
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to preload linked page titles:', e)
+  }
+}
+
+// 页面切换时加载关系 & 预加载链接页面的 title
+watch(selectedPage, async (page) => {
   if (page) {
-    loadPageRelations(page.slug, page.page_type)
+    // 先加载关系数据
+    await loadPageRelations(page.slug, page.page_type)
+    // 收集关系中的所有 slug（本体关系的 source/target）
+    const relationSlugs: string[] = []
+    pageRelations.value.outgoing.forEach(r => relationSlugs.push(r.target_slug))
+    pageRelations.value.incoming.forEach(r => relationSlugs.push(r.source_slug))
+    // 预加载 wiki链接 + 关系页面的标题
+    preloadLinkedPageTitles(page, relationSlugs)
   } else {
     pageRelations.value = { outgoing: [], incoming: [] }
   }
@@ -1060,6 +1100,14 @@ const indexSectionIdx = ref(0)
 const indexBodyRef = ref<HTMLElement | null>(null)
 const indexSentinelRef = ref<HTMLElement | null>(null)
 let indexObserver: IntersectionObserver | null = null
+// 每个一级目录最多显示的条目数，超过显示 "..."
+const INDEX_MAX_PER_DIR = 10
+// 跨批次记录已输出的目录路径（避免目录名重复出现）
+const indexEmittedDirs = new Set<string>()
+// 每个一级目录已输出的条目计数（用于截断）
+const indexDirCounters: Record<string, number> = {}
+// 已输出 "..." 的一级目录集合（避免重复输出省略号）
+const indexTruncatedDirs = new Set<string>()
 
 // Order matters: Summary first (these are the document-level pages the
 // user most often wants to see), then the LLM-derived ones. Matches the
@@ -2733,6 +2781,10 @@ async function loadIndex() {
     indexAvailable.value = true
     indexSections.value = {}
     indexSectionIdx.value = 0
+    // 重置跨批次的目录追踪状态
+    indexEmittedDirs.clear()
+    Object.keys(indexDirCounters).forEach(k => delete indexDirCounters[k])
+    indexTruncatedDirs.clear()
   } catch (e) {
     console.error('Failed to load wiki index:', e)
   }
@@ -2757,26 +2809,43 @@ async function openIndexView() {
   // the view is a render-time concern.
 }
 
-function appendIndexDirectoryLines(items: WikiIndexEntryDTO[]): string {
+function appendIndexDirectoryLines(items: WikiIndexEntryDTO[], truncate: boolean = true): string {
   let out = ''
-  const emittedDirs = new Set<string>()
   for (const entry of items) {
     const path = (Array.isArray(entry.category_path) ? entry.category_path : [])
       .map(part => String(part || '').trim())
       .filter(Boolean)
+    const topDir = path[0] || ''
+
+    // 如果需要截断，且一级目录已达上限，跳过该条目
+    if (truncate && topDir && (indexDirCounters[topDir] || 0) >= INDEX_MAX_PER_DIR) {
+      continue
+    }
+
+    // 输出目录层级（跨批次去重，避免目录名重复出现）
     for (let i = 0; i < path.length; i++) {
       const parts = path.slice(0, i + 1)
       const key = parts.join('/')
-      if (emittedDirs.has(key)) continue
-      emittedDirs.add(key)
+      if (indexEmittedDirs.has(key)) continue
+      indexEmittedDirs.add(key)
       out += `${'  '.repeat(i)}**${path[i]}**\n`
     }
+
     const display = entry.title || entry.slug
     const indent = '  '.repeat(path.length)
     if (entry.summary) {
       out += `${indent}[[${entry.slug}|${display}]] — ${entry.summary}\n`
     } else {
       out += `${indent}[[${entry.slug}|${display}]]\n`
+    }
+
+    if (topDir) {
+      indexDirCounters[topDir] = (indexDirCounters[topDir] || 0) + 1
+      // 刚达到上限时，输出 "..."
+      if (truncate && indexDirCounters[topDir] === INDEX_MAX_PER_DIR && !indexTruncatedDirs.has(topDir)) {
+        indexTruncatedDirs.add(topDir)
+        out += `${'  '.repeat(path.length)}...\n`
+      }
     }
   }
   return out
@@ -2803,9 +2872,11 @@ async function loadMoreIndexSection() {
 
   indexLoading.value = true
   try {
+    // 截断模式下一次加载更多条目，确保能覆盖所有一级目录，避免用户滚动多次才看到其他目录
+    const pageLimit = type === 'summary' ? 50 : 500
     const res = await getWikiIndex(props.knowledgeBaseId, {
       types: [type],
-      limit: 50,
+      limit: pageLimit,
       cursor: isFirstChunkOfSection ? undefined : state.cursor || undefined,
     })
     const body: any = (res as any).data || (res as any)
@@ -2823,11 +2894,13 @@ async function loadMoreIndexSection() {
       const label = getTypeLabel(type)
       appended += `\n## ${label} (${total})\n\n`
     }
-    appended += appendIndexDirectoryLines(items)
+    // summary 类型全部显示，不截断；其他类型按每目录10条截断
+    const shouldTruncate = type !== 'summary'
+    const dirLines = appendIndexDirectoryLines(items, shouldTruncate)
+    appended += dirLines
     if (appended) {
       indexMarkdown.value = indexMarkdown.value + appended
     }
-
     indexSections.value[type] = {
       loaded: true,
       cursor: nextCursor,

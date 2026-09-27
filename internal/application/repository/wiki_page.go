@@ -696,6 +696,7 @@ func (r *wikiPageRepository) ListAllFolders(ctx context.Context, kbID string) ([
 	if err := r.db.WithContext(ctx).
 		Where("knowledge_base_id = ?", kbID).
 		Order("depth ASC").
+		Order("sort_order ASC").
 		Order("path ASC").
 		Find(&folders).Error; err != nil {
 		return nil, err
