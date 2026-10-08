@@ -75,6 +75,15 @@ help:
 	@echo "  dev-frontend-bg-status  查看前端状态"
 	@echo "  dev-frontend-bg-logs    实时查看前端日志"
 	@echo ""
+	@echo "调试版（fqx专用，不启基础设施，共用pg-zzh的基础设施）:"
+	@echo "  dev-fqx            一键启动调试版前后端（后台运行）"
+	@echo "  dev-fqx-stop       停止调试版前后端"
+	@echo "  dev-fqx-restart    重启调试版前后端"
+	@echo "  dev-fqx-status     查看调试版状态"
+	@echo "  dev-fqx-logs       查看调试版日志（后端+前端各最后20行）"
+	@echo "  dev-fqx-logs-app   实时查看后端日志"
+	@echo "  dev-fqx-logs-frontend  实时查看前端日志"
+	@echo ""
 	@echo "Lite 模式（零外部依赖）:"
 	@echo "  build-lite        构建 Lite 版本（先构建前端到 web/，再构建 Go；SKIP_FRONTEND=1 跳过前端）"
 	@echo "  run-lite          构建并启动 Lite 版本"
@@ -413,5 +422,71 @@ dev-bg-stop:
 	./scripts/dev-frontend-nohup.sh stop
 	./scripts/dev-app-nohup.sh stop
 	./scripts/dev.sh stop
+
+# 调试版专用：只启动前后端（不启动基础设施，共用 pg-zzh 的基础设施）
+dev-fqx:
+	@echo "=================================================="
+	@echo "  启动调试版前后端（共用基础设施）"
+	@echo "  后端: http://localhost:8083"
+	@echo "  前端: http://localhost:5174"
+	@echo "=================================================="
+	@echo ""
+	@echo "正在启动后端..."
+	./scripts/dev-app-nohup.sh start
+	@echo ""
+	@echo "正在启动前端..."
+	./scripts/dev-frontend-nohup.sh start
+	@echo ""
+	@echo "=================================================="
+	@echo "  调试版已启动"
+	@echo "  后端: http://localhost:8083"
+	@echo "  前端: http://localhost:5174"
+	@echo "  后端日志: tail -f log.log"
+	@echo "  前端日志: tail -f log_frontend.log"
+	@echo "  停止: make dev-fqx-stop"
+	@echo "=================================================="
+
+dev-fqx-stop:
+	@echo "正在停止前端..."
+	./scripts/dev-frontend-nohup.sh stop
+	@echo ""
+	@echo "正在停止后端..."
+	./scripts/dev-app-nohup.sh stop
+	@echo ""
+	@echo "调试版已停止（基础设施未停止，仍在运行）"
+
+dev-fqx-restart:
+	@echo "正在重启调试版前后端..."
+	./scripts/dev-frontend-nohup.sh restart
+	./scripts/dev-app-nohup.sh restart
+	@echo "调试版前后端已重启"
+
+dev-fqx-status:
+	@echo "=== 调试版状态 ==="
+	./scripts/dev-app-nohup.sh status
+	./scripts/dev-frontend-nohup.sh status
+
+dev-fqx-logs:
+	@echo "=============================="
+	@echo "  调试版日志"
+	@echo "=============================="
+	@echo ""
+	@echo "--- 后端日志 (最后 20 行) ---"
+	@if [ -f log.log ]; then tail -n 20 log.log; else echo "  (日志文件不存在，后端可能未启动)"; fi
+	@echo ""
+	@echo "--- 前端日志 (最后 20 行) ---"
+	@if [ -f log_frontend.log ]; then tail -n 20 log_frontend.log; else echo "  (日志文件不存在，前端可能未启动)"; fi
+	@echo ""
+	@echo "实时查看日志:"
+	@echo "  后端: tail -f log.log"
+	@echo "  前端: tail -f log_frontend.log"
+
+dev-fqx-logs-app:
+	@echo "--- 后端日志 (实时) ---"
+	tail -f log.log
+
+dev-fqx-logs-frontend:
+	@echo "--- 前端日志 (实时) ---"
+	tail -f log_frontend.log
 
 
