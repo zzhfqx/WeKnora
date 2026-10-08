@@ -43,6 +43,7 @@ import {
   type KnowledgeFolderTree,
 } from "@/api/knowledge-base/index";
 import { waitForKnowledgeDeletion } from '@/utils/knowledgeDeletion';
+import { isTimeoutError } from '@/utils/requestTimeouts';
 import { knowledgeSpansPayloadHasTrace } from '@/utils/knowledgeTrace';
 import FAQEntryManager from './components/FAQEntryManager.vue';
 import DocumentListView from './components/DocumentListView.vue';
@@ -1611,8 +1612,8 @@ const getUploadFailureReason = (error: any, responseData: any): string => {
   if (responseData?.code === 'duplicate_file' || responseData?.error?.code === 'duplicate_file' || error?.code === 'duplicate_file') {
     return '文件已存在';
   }
-  // 超时
-  if (error?.code === 'ECONNABORTED' || error?.message?.includes('timeout') || error?.message?.includes('超时')) {
+  // 超时（复用 isTimeoutError 工具函数，覆盖 ECONNABORTED / ETIMEDOUT / message 含 timeout 等多种情况）
+  if (isTimeoutError(error)) {
     return '上传超时（文件太大或网络较慢，请检查网络后重试）';
   }
   // 网络错误

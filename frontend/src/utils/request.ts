@@ -4,6 +4,7 @@ import { generateRandomString, MAX_FILE_SIZE_MB, MAX_SKILL_BUNDLE_SIZE_MB } from
 import i18n from '@/i18n'
 import { getApiBaseUrl } from './api-base';
 import { isSkillBundleUploadUrl } from './uploadLimit';
+import { uploadTimeoutMs } from './requestTimeouts';
 import {
   forceReloginRedirect,
   isEmbedPage,
@@ -229,6 +230,11 @@ export function postUpload(
   config: any = {},
 ): Promise<WithStatus<any>> {
   return instance.post(url, data, {
+    // Uploads are bounded by transfer time, not by the 30s default that suits
+    // JSON calls. Derive the budget from the payload so a deployment raising
+    // MAX_FILE_SIZE_MB doesn't silently abort its own uploads; an explicit
+    // `config.timeout` still wins.
+    timeout: uploadTimeoutMs(data),
     ...config,
     headers: {
       "Content-Type": "multipart/form-data",
