@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeKnora 快速开发模式部署架构图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background: #f0f4f8;
+    padding: 40px 20px;
+    color: #1a2332;
+  }
+  .diagram-container {
+    max-width: 1360px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a2332;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .subtitle {
+    font-size: 14px;
+    color: #5c6b85;
+  }
+  .subtitle .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    margin: 0 4px;
+  }
+  .badge.proj { background: #dbeafe; color: #1d4ed8; }
+  .badge.server { background: #dcfce7; color: #15803d; }
+
+  /* Main server frame */
+  .server-frame {
+    border: 2.5px solid #2563eb;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 8px 32px rgba(37, 99, 235, 0.12);
+    overflow: hidden;
+    position: relative;
+  }
+  .server-header {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color: #fff;
+    padding: 14px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .server-header .left { display: flex; align-items: center; gap: 10px; }
+  .server-header .right { display: flex; gap: 24px; font-size: 13px; font-weight: 400; flex-wrap: wrap; }
+  .server-header .right span { opacity: 0.9; }
+
+  /* Zone labels */
+  .zone-row {
+    display: flex;
+    border-bottom: 2px solid #e2e8f0;
+  }
+  .zone-label {
+    width: 120px;
+    padding: 14px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    writing-mode: horizontal-tb;
+    border-right: 2px solid #e2e8f0;
+  }
+  .zone-content {
+    flex: 1;
+    padding: 16px 22px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: stretch;
+  }
+
+  /* Color-coded zones */
+  .zone-user .zone-label { background: #eff6ff; color: #1d4ed8; }
+  .zone-user .zone-content { background: #f8fafc; }
+
+  .zone-frontend .zone-label { background: #f0fdf4; color: #15803d; }
+  .zone-frontend .zone-content { background: #f0fdf4; }
+
+  .zone-backend .zone-label { background: #fef3c7; color: #92400e; }
+  .zone-backend .zone-content { background: #fffbeb; }
+
+  .zone-infra .zone-label { background: #f5f3ff; color: #5b21b6; }
+  .zone-infra .zone-content { background: #f5f3ff; }
+
+  .zone-storage .zone-label { background: #ecfeff; color: #0e7490; }
+  .zone-storage .zone-content { background: #ecfeff; }
+
+  /* Service card */
+  .service-card {
+    background: #fff;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 14px;
+    min-width: 180px;
+    flex: 1;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .service-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  }
+  .service-card .icon {
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+  .service-card .name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 4px;
+  }
+  .service-card .desc {
+    font-size: 11.5px;
+    color: #64748b;
+    line-height: 1.4;
+    margin-bottom: 6px;
+  }
+  .service-card .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tag {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Consolas', 'Microsoft YaHei', monospace;
+    letter-spacing: 0.2px;
+  }
+  .tag.port { background: #dbeafe; color: #1e40af; }
+  .tag.docker { background: #e0f2fe; color: #0369a1; }
+  .tag.local { background: #dcfce7; color: #166534; }
+  .tag.healthy { background: #dcfce7; color: #15803d; }
+  .tag.unhealthy { background: #fee2e2; color: #b91c1c; }
+
+  /* Arrow connector */
+  .connector {
+    display: flex;
+    justify-content: center;
+    padding: 4px 0;
+    background: #fff;
+    position: relative;
+  }
+  .connector .arrow {
+    font-size: 18px;
+    color: #94a3b8;
+    font-weight: 700;
+  }
+  .connector .arrow-label {
+    position: absolute;
+    right: 40px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10.5px;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+
+  /* Connection lines between cards in same zone */
+  .conn-note {
+    font-size: 11px;
+    color: #64748b;
+    padding: 6px 22px;
+    background: #f8fafc;
+    border-top: 1px dashed #e2e8f0;
+    font-style: italic;
+  }
+
+  /* Deployment mode explanation */
+  .mode-info {
+    margin-top: 24px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .mode-info h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mode-info h3::before {
+    content: '💡';
+  }
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+  .mode-item {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .mode-item .k {
+    font-size: 11.5px;
+    color: #64748b;
+    margin-bottom: 3px;
+  }
+  .mode-item .v {
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  /* Data flow */
+  .dataflow {
+    margin-top: 24px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 22px 28px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .dataflow h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 16px;
+  }
+  .flow-chain {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+  .flow-node {
+    background: #eff6ff;
+    border: 1.5px solid #3b82f6;
+    color: #1e40af;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .flow-node.storage { background: #ecfeff; border-color: #06b6d4; color: #0e7490; }
+  .flow-node.ai { background: #fdf4ff; border-color: #a855f7; color: #7c3aed; }
+  .flow-arrow { color: #94a3b8; font-size: 16px; }
+
+  /* Legend */
+  .legend {
+    margin-top: 24px;
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 24px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .legend h4 {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
+    margin-bottom: 10px;
+  }
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #475569;
+  }
+  .legend-icon {
+    width: 22px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1.5px solid;
+  }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 20px;
+    line-height: 1.8;
+  }
+
+  @media (max-width: 768px) {
+    .zone-row { flex-direction: column; }
+    .zone-label {
+      width: 100%;
+      border-right: none;
+      border-bottom: 2px solid #e2e8f0;
+      padding: 8px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-container">
+  <div class="header">
+    <div class="title">WeKnora 快速开发模式部署架构图</div>
+    <div class="subtitle">
+      <span class="badge proj">项目: weknora-dev</span>
+      <span class="badge server">服务器 192.168.21.10</span>
+      <span class="badge proj">v0.8.2 源码</span>
+    </div>
+  </div>
+
+  <!-- 主部署图 -->
+  <div class="server-frame">
+    <div class="server-header">
+      <div class="left">🖥️ 开发服务器 (Linux)</div>
+      <div class="right">
+        <span>78GB RAM · 40核 CPU</span>
+        <span>Docker Engine</span>
+        <span>混合部署: 容器 + 本地进程</span>
+      </div>
+    </div>
+
+    <!-- 第1层：用户/浏览器 -->
+    <div class="zone-row zone-user">
+      <div class="zone-label">用户层</div>
+      <div class="zone-content">
+        <div class="service-card" style="max-width: 220px;">
+          <div class="icon">🌐</div>
+          <div class="name">开发者浏览器</div>
+          <div class="desc">访问前端开发服务器，调试 API 接口</div>
+          <div class="tags">
+            <span class="tag port">HTTP</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span class="arrow">▼</span><span class="arrow-label">HTTP 请求</span></div>
+
+    <!-- 第2层：前端 -->
+    <div class="zone-row zone-frontend">
+      <div class="zone-label">前端层</div>
+      <div class="zone-content">
+        <div class="service-card">
+          <div class="icon">⚡</div>
+          <div class="name">Vite Dev Server</div>
+          <div class="desc">Vue 3 + TDesign + TypeScript 开发服务器，支持 HMR 热重载</div>
+          <div class="tags">
+            <span class="tag local">本地进程</span>
+            <span class="tag port">:5173</span>
+          </div>
+        </div>
+        <div class="service-card" style="opacity:0.7;">
+          <div class="icon">🔧</div>
+          <div class="name">dev.sh 开发脚本</div>
+          <div class="desc">自动配置 DEV_REMOTE_HOST 环境变量，统一管理基础设施连接地址</div>
+          <div class="tags">
+            <span class="tag">配置注入</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span class="arrow">▼</span><span class="arrow-label">/api 代理转发</span></div>
+
+    <!-- 第3层：后端应用 -->
+    <div class="zone-row zone-backend">
+      <div class="zone-label">应用层</div>
+      <div class="zone-content">
+        <div class="service-card">
+          <div class="icon">🚀</div>
+          <div class="name">WeKnora App (Go)</div>
+          <div class="desc">后端主服务，REST API + SSE 流式 + WebSocket，Gin 框架 + Uber Dig 依赖注入</div>
+          <div class="tags">
+            <span class="tag local">本地进程</span>
+            <span class="tag port">:8082</span>
+            <span class="tag">go run / air热重载</span>
+          </div>
+        </div>
+        <div class="service-card" style="opacity:0.7;">
+          <div class="icon">📄</div>
+          <div class="name">Swagger API 文档</div>
+          <div class="desc">非 release 模式自动暴露，调试接口用</div>
+          <div class="tags">
+            <span class="tag port">:8082/swagger</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span class="arrow">▼</span><span class="arrow-label">gRPC / TCP / RESP</span></div>
+
+    <!-- 第4层：基础设施服务 (Docker) -->
+    <div class="zone-row zone-infra">
+      <div class="zone-label">基础设施<br/>(Docker)</div>
+      <div class="zone-content">
+        <div class="service-card">
+          <div class="icon">📚</div>
+          <div class="name">DocReader</div>
+          <div class="desc">Python 文档解析微服务，gRPC 协议，支持 25+ 文件格式解析</div>
+          <div class="tags">
+            <span class="tag docker">Docker</span>
+            <span class="tag port">:15051 → 50051</span>
+            <span class="tag healthy">healthy</span>
+          </div>
+        </div>
+        <div class="service-card">
+          <div class="icon">🔴</div>
+          <div class="name">Redis</div>
+          <div class="desc">Asynq 任务队列、SSE 流管理、限流、Pub/Sub、分布式锁</div>
+          <div class="tags">
+            <span class="tag docker">Docker</span>
+            <span class="tag port">:16379 → 6379</span>
+          </div>
+        </div>
+        <div class="service-card">
+          <div class="icon">🐘</div>
+          <div class="name">PostgreSQL (ParadeDB)</div>
+          <div class="desc">主数据库，自带 BM25 全文检索 + pgvector 向量扩展</div>
+          <div class="tags">
+            <span class="tag docker">Docker</span>
+            <span class="tag port">:65432 → 5432</span>
+            <span class="tag healthy">healthy</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="connector"><span class="arrow">▼</span><span class="arrow-label">SQL / RESP 协议</span></div>
+
+    <!-- 第5层：数据存储卷 -->
+    <div class="zone-row zone-storage">
+      <div class="zone-label">存储层<br/>(Volume)</div>
+      <div class="zone-content">
+        <div class="service-card">
+          <div class="icon">💾</div>
+          <div class="name">postgres-data-dev</div>
+          <div class="desc">PostgreSQL 数据卷，持久化业务数据</div>
+          <div class="tags">
+            <span class="tag">Docker Volume</span>
+          </div>
+        </div>
+        <div class="service-card">
+          <div class="icon">📁</div>
+          <div class="name">data-files (本地)</div>
+          <div class="desc">上传文件存储目录，开发模式本地文件系统</div>
+          <div class="tags">
+            <span class="tag local">本地文件</span>
+            <span class="tag">.local-data/files</span>
+          </div>
+        </div>
+        <div class="service-card">
+          <div class="icon">🗂️</div>
+          <div class="name">docreader-tmp</div>
+          <div class="desc">DocReader 与 App 共享临时卷，传递解析产物图片</div>
+          <div class="tags">
+            <span class="tag">共享 Volume</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 可选服务说明 -->
+    <div class="conn-note">
+      ⚙️ 可选服务（需通过 profile 手动启用）: Neo4j 知识图谱 → <span style="font-family:monospace;">:17474/:17687</span>
+      &nbsp;|&nbsp; MinIO 对象存储 → <span style="font-family:monospace;">:19000/:19001</span>
+      &nbsp;|&nbsp; Langfuse 可观测 → <span style="font-family:monospace;">:13000</span> + ClickHouse + MinIO
+      &nbsp;|&nbsp; Qdrant / Milvus / Weaviate 向量库
+    </div>
+  </div>
+
+  <!-- 开发模式特点 -->
+  <div class="mode-info">
+    <h3>快速开发模式特点</h3>
+    <div class="mode-grid">
+      <div class="mode-item">
+        <div class="k">启动命令</div>
+        <div class="v">make dev-start + make dev-app + make dev-frontend</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">项目目录</div>
+        <div class="v">/root/home/workspace_cribc/my_weknora/WeKnora</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">Compose 项目名</div>
+        <div class="v">weknora-dev（与生产环境隔离）</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">Compose 文件</div>
+        <div class="v">docker-compose.dev.yml</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">前端访问地址</div>
+        <div class="v">http://192.168.21.10:5173</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">后端 API 地址</div>
+        <div class="v">http://192.168.21.10:8082</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">Swagger 文档</div>
+        <div class="v">http://192.168.21.10:8082/swagger/index.html</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">数据隔离</div>
+        <div class="v">独立 Docker 网络 + 独立 Volume，与生产完全隔离</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">热重载</div>
+        <div class="v">前端 Vite HMR + 后端 Air（可选）</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">环境变量配置</div>
+        <div class="v">DEV_REMOTE_HOST=192.168.21.10（自动适配端口）</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">Gin 模式</div>
+        <div class="v">debug 模式（开启日志和 Swagger）</div>
+      </div>
+      <div class="mode-item">
+        <div class="k">文件存储</div>
+        <div class="v">本地文件系统（默认为 local）</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 数据流 -->
+  <div class="dataflow">
+    <h3>📊 典型请求数据流</h3>
+    <div class="flow-chain">
+      <div class="flow-node">浏览器 :5173</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">Vite Dev Server</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">Go App :8082</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node storage">PostgreSQL :65432</div>
+      <div class="flow-arrow">+</div>
+      <div class="flow-node storage">Redis :16379</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">DocReader gRPC</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node ai">外部 LLM API</div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node">SSE 流式返回</div>
+    </div>
+  </div>
+
+  <!-- 图例 -->
+  <div class="legend">
+    <h4>📋 图例</h4>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-icon" style="background:#dcfce7;border-color:#16a34a;"></div>本地进程 (go run / node)</div>
+      <div class="legend-item"><div class="legend-icon" style="background:#e0f2fe;border-color:#0369a1;"></div>Docker 容器</div>
+      <div class="legend-item"><div class="legend-icon" style="background:#dbeafe;border-color:#1e40af;"></div>端口映射 (宿主机→容器)</div>
+      <div class="legend-item"><div class="legend-icon" style="background:#dcfce7;border-color:#15803d;"></div>healthy 健康检查通过</div>
+      <div class="legend-item">Docker Compose Project: <b>weknora-dev</b></div>
+      <div class="legend-item">网络: <b>weknora-dev_WeKnora-network</b></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    WeKnora 快速开发模式部署架构图 · 基于服务器 192.168.21.10 实际运行状态生成
+    <br>
+    基础设施 Docker 容器化 + 前后端本地进程开发 · 数据与生产环境完全隔离 · 支持热重载
+  </div>
+</div>
+</body>
+</html>

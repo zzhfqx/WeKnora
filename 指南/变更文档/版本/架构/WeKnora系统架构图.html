@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeKnora v0.8.2 系统架构图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background: #f3f4f6;
+    padding: 40px 20px;
+    color: #111827;
+  }
+  .diagram-wrapper {
+    max-width: 1480px;
+    margin: 0 auto;
+  }
+  .diagram-header {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .diagram-title {
+    font-size: 30px;
+    font-weight: 700;
+    color: #111827;
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+  }
+  .diagram-subtitle {
+    font-size: 14px;
+    color: #6b7280;
+    letter-spacing: 1px;
+  }
+  .diagram-subtitle .tag {
+    display: inline-block;
+    background: #eef2ff;
+    color: #4338ca;
+    padding: 2px 10px;
+    border-radius: 4px;
+    font-weight: 600;
+    margin: 0 4px;
+    font-size: 12px;
+  }
+
+  /* Layer container */
+  .architecture-layer {
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .layer-side-label {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 52px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px 0 0 8px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    z-index: 3;
+  }
+  .layer-content {
+    margin-left: 52px;
+    border-radius: 0 10px 10px 0;
+    border: 1.5px solid;
+    border-left: none;
+    padding: 18px 22px;
+    background: #ffffff;
+    position: relative;
+  }
+
+  /* Layer color themes */
+  .layer-client .layer-side-label { background: #4f46e5; color: #fff; }
+  .layer-client .layer-content { border-color: #c7d2fe; background: #eef2ff; }
+
+  .layer-gateway .layer-side-label { background: #059669; color: #fff; }
+  .layer-gateway .layer-content { border-color: #a7f3d0; background: #ecfdf5; }
+
+  .layer-app .layer-side-label { background: #d97706; color: #fff; }
+  .layer-app .layer-content { border-color: #fde68a; background: #fffbeb; }
+
+  .layer-domain .layer-side-label { background: #7c3aed; color: #fff; }
+  .layer-domain .layer-content { border-color: #ddd6fe; background: #f5f3ff; }
+
+  .layer-infra .layer-side-label { background: #db2777; color: #fff; }
+  .layer-infra .layer-content { border-color: #fbcfe8; background: #fdf2f8; }
+
+  .layer-storage .layer-side-label { background: #0891b2; color: #fff; }
+  .layer-storage .layer-content { border-color: #a5f3fc; background: #ecfeff; }
+
+  .layer-external .layer-side-label { background: #b45309; color: #fff; }
+  .layer-external .layer-content { border-color: #fcd34d; background: #fef3c7; }
+
+  /* Column groups */
+  .group-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .component-group {
+    flex: 1;
+    min-width: 220px;
+    background: rgba(255,255,255,0.85);
+    border: 1px dashed #d1d5db;
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .group-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px dashed #e5e7eb;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .group-title::before {
+    content: '';
+    width: 3px;
+    height: 12px;
+    border-radius: 2px;
+    background: currentColor;
+  }
+
+  /* Component cards */
+  .component-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .comp {
+    background: #ffffff;
+    border: 1.5px solid #d1d5db;
+    border-radius: 6px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1f2937;
+    line-height: 1.3;
+    transition: all 0.15s;
+    cursor: default;
+    white-space: nowrap;
+  }
+  .comp:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+  }
+  .comp .tech {
+    display: block;
+    font-size: 10.5px;
+    color: #6b7280;
+    font-weight: 400;
+    margin-top: 2px;
+    letter-spacing: 0;
+  }
+  .comp.primary { border-color: #4f46e5; background: #eef2ff; color: #3730a3; }
+  .comp.success { border-color: #059669; background: #ecfdf5; color: #065f46; }
+  .comp.amber { border-color: #d97706; background: #fffbeb; color: #92400e; }
+  .comp.purple { border-color: #7c3aed; background: #f5f3ff; color: #5b21b6; }
+  .comp.pink { border-color: #db2777; background: #fdf2f8; color: #9d174d; }
+  .comp.cyan { border-color: #0891b2; background: #ecfeff; color: #155e75; }
+  .comp.orange { border-color: #ea580c; background: #fff7ed; color: #9a3412; }
+  .comp.slate { border-color: #475569; background: #f8fafc; color: #334155; }
+
+  /* Connector arrow */
+  .layer-arrow {
+    text-align: center;
+    color: #9ca3af;
+    font-size: 16px;
+    line-height: 1;
+    margin: -4px 0 -4px;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* Legend */
+  .legend-section {
+    margin-top: 28px;
+    background: #ffffff;
+    border-radius: 10px;
+    padding: 20px 28px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  }
+  .legend-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+  }
+  .legend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #4b5563;
+  }
+  .legend-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    border: 1.5px solid;
+    flex-shrink: 0;
+  }
+
+  .footer-note {
+    text-align: center;
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    line-height: 1.8;
+  }
+
+  @media print {
+    body { background: #fff; padding: 10px; }
+    .comp:hover { transform: none; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram-wrapper">
+  <div class="diagram-header">
+    <div class="diagram-title">WeKnora 系统架构图</div>
+    <div class="diagram-subtitle">
+      <span class="tag">v0.8.2</span>
+      企业级知识库与 AI Agent 平台
+      <span class="tag">腾讯</span>
+    </div>
+  </div>
+
+  <!-- 第1层：客户端接入层 -->
+  <div class="architecture-layer layer-client">
+    <div class="layer-side-label">接入层</div>
+    <div class="layer-content">
+      <div class="group-row">
+        <div class="component-group">
+          <div class="group-title">Web &amp; 桌面端</div>
+          <div class="component-grid">
+            <div class="comp primary">Web 管理端<span class="tech">Vue 3 + TDesign + Vite 7</span></div>
+            <div class="comp primary">桌面端 (WeKnora Lite)<span class="tech">Wails v2.12.0</span></div>
+            <div class="comp primary">微信小程序<span class="tech">原生小程序</span></div>
+            <div class="comp primary">嵌入组件 (Embed)<span class="tech">JS SDK / iframe</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">IM 渠道</div>
+          <div class="component-grid">
+            <div class="comp primary">企业微信<span class="tech">Webhook + 长连接</span></div>
+            <div class="comp primary">飞书 / Lark<span class="tech">开放平台 SDK</span></div>
+            <div class="comp primary">钉钉<span class="tech">Stream SDK</span></div>
+            <div class="comp primary">微信公众号<span class="tech">微信平台</span></div>
+            <div class="comp primary">Slack<span class="tech">Slack SDK</span></div>
+            <div class="comp primary">Telegram<span class="tech">Bot API</span></div>
+            <div class="comp primary">QQ 机器人<span class="tech">QQ 开放平台</span></div>
+            <div class="comp primary">Mattermost / 云之家<span class="tech">Webhook</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">API &amp; 协议接入</div>
+          <div class="component-grid">
+            <div class="comp primary">RESTful API<span class="tech">/api/v1 · 360+ 端点</span></div>
+            <div class="comp primary">SSE 流式响应<span class="tech">对话/任务进度</span></div>
+            <div class="comp primary">WebSocket<span class="tech">沙箱终端/浏览器</span></div>
+            <div class="comp primary">MCP Server 端点<span class="tech">Streamable HTTP</span></div>
+            <div class="comp primary">Go SDK / CLI<span class="tech">client/ + cli/</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-arrow">▼</div>
+
+  <!-- 第2层：网关/路由层 -->
+  <div class="architecture-layer layer-gateway">
+    <div class="layer-side-label">网关层</div>
+    <div class="layer-content">
+      <div class="group-row">
+        <div class="component-group">
+          <div class="group-title">反向代理 &amp; 静态资源</div>
+          <div class="component-grid">
+            <div class="comp success">Nginx<span class="tech">静态资源 + /api 反代</span></div>
+            <div class="comp success">CORS 跨域<span class="tech">gin-contrib/cors</span></div>
+            <div class="comp success">文件上传代理<span class="tech">大文件分片</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">Web 引擎 &amp; 路由</div>
+          <div class="component-grid">
+            <div class="comp success">Gin HTTP 引擎<span class="tech">v1.12.0</span></div>
+            <div class="comp success">路由注册<span class="tech">路由分组 + 中间件链</span></div>
+            <div class="comp success">Swagger API 文档<span class="tech">swaggo · /swagger</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">中间件</div>
+          <div class="component-grid">
+            <div class="comp success">认证中间件<span class="tech">JWT/OIDC/API Key/Embed</span></div>
+            <div class="comp success">RBAC 权限中间件<span class="tech">角色 + 权限校验</span></div>
+            <div class="comp success">限流中间件<span class="tech">令牌桶 · 全局限流</span></div>
+            <div class="comp success">请求日志<span class="tech">request_id 贯穿</span></div>
+            <div class="comp success">异常恢复<span class="tech">Panic Recovery</span></div>
+            <div class="comp success">审计日志<span class="tech">操作全链路记录</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-arrow">▼</div>
+
+  <!-- 第3层：应用服务层 -->
+  <div class="architecture-layer layer-app">
+    <div class="layer-side-label">应用层</div>
+    <div class="layer-content">
+      <div class="group-row">
+        <div class="component-group">
+          <div class="group-title">知识管理域</div>
+          <div class="component-grid">
+            <div class="comp amber">知识库管理<span class="tech">空间/目录/标签/FAQ</span></div>
+            <div class="comp amber">文档处理流水线<span class="tech">解析→分块→向量化</span></div>
+            <div class="comp amber">文档检索服务<span class="tech">向量/全文/混合检索</span></div>
+            <div class="comp amber">重排服务 (Rerank)<span class="tech">MMR + 模型重排</span></div>
+            <div class="comp amber">Wiki 知识库<span class="tech">页面/链接/自动重建</span></div>
+            <div class="comp amber">记忆系统 (Memory)<span class="tech">Agent 长期记忆</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">对话 &amp; Agent 域</div>
+          <div class="component-grid">
+            <div class="comp amber">对话引擎<span class="tech">多轮/流式/引用溯源</span></div>
+            <div class="comp amber">Agent 引擎<span class="tech">ReAct · Think-Act-Observe</span></div>
+            <div class="comp amber">Agent 工具集<span class="tech">20+ 内置工具</span></div>
+            <div class="comp amber">技能 (Skill) 系统<span class="tech">沙箱可安装技能</span></div>
+            <div class="comp amber">MCP 客户端<span class="tech">mcp-go v0.52.0 + OAuth</span></div>
+            <div class="comp amber">沙箱执行引擎<span class="tech">Docker/E2B/Cube/本地</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">系统 &amp; 权限域</div>
+          <div class="component-grid">
+            <div class="comp amber">多租户管理<span class="tech">组织/成员/邀请</span></div>
+            <div class="comp amber">用户认证<span class="tech">JWT + OIDC + API Key</span></div>
+            <div class="comp amber">RBAC 权限<span class="tech">角色/权限点/数据权限</span></div>
+            <div class="comp amber">模型目录管理<span class="tech">模型编目/权限/配额</span></div>
+            <div class="comp amber">系统设置<span class="tech">运行时配置热更新</span></div>
+            <div class="comp amber">审计与合规<span class="tech">操作日志/变更追溯</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="group-row" style="margin-top: 14px;">
+        <div class="component-group">
+          <div class="group-title">集成 &amp; 扩展域</div>
+          <div class="component-grid">
+            <div class="comp amber">数据源同步<span class="tech">飞书/语雀/Notion/Confluence/GitLab/RSS</span></div>
+            <div class="comp amber">IM 消息适配层<span class="tech">9+ 平台统一适配</span></div>
+            <div class="comp amber">Web 搜索聚合<span class="tech">15+ 搜索引擎接入</span></div>
+            <div class="comp amber">浏览器技能<span class="tech">Chrome 扩展 + 远程操控</span></div>
+            <div class="comp amber">数据分析工具<span class="tech">DuckDB + SQL 校验</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-arrow">▼</div>
+
+  <!-- 第4层：领域/基础设施服务层 -->
+  <div class="architecture-layer layer-domain">
+    <div class="layer-side-label">服务层</div>
+    <div class="layer-content">
+      <div class="group-row">
+        <div class="component-group">
+          <div class="group-title">AI 模型服务</div>
+          <div class="component-grid">
+            <div class="comp purple">LLM 模型接入<span class="tech">32 家厂商 · 自研协议层</span></div>
+            <div class="comp purple">Embedding 模型<span class="tech">多模型/多提供商</span></div>
+            <div class="comp purple">Rerank 模型<span class="tech">重排序服务</span></div>
+            <div class="comp purple">VLM 多模态<span class="tech">图像理解/PDF VLM</span></div>
+            <div class="comp purple">ASR 语音<span class="tech">语音识别</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">文档解析微服务 (gRPC)</div>
+          <div class="component-grid">
+            <div class="comp purple">DocReader 服务<span class="tech">Python + gRPC v1.78</span></div>
+            <div class="comp purple">AnyDoc 通用解析<span class="tech">25+ 文件格式</span></div>
+            <div class="comp purple">MinerU 深度解析<span class="tech">PDF 布局/公式/表格</span></div>
+            <div class="comp purple">PaddleOCR / VLM 解析<span class="tech">图片/扫描件</span></div>
+            <div class="comp purple">Playwright 网页渲染<span class="tech">动态页面抓取</span></div>
+            <div class="comp purple">OpenDataLoader 混合解析<span class="tech">ODL-Hybrid</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">MCP 服务</div>
+          <div class="component-grid">
+            <div class="comp purple">内置 MCP Server<span class="tech">Go · /mcp/:endpoint_id</span></div>
+            <div class="comp purple">Python MCP Server<span class="tech">独立部署 · SDK</span></div>
+            <div class="comp purple">CLI MCP Server<span class="tech">stdio 传输</span></div>
+            <div class="comp purple">MCP OAuth 授权<span class="tech">OAuth 2.0 流程</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-arrow">▼</div>
+
+  <!-- 第5层：基础设施层 -->
+  <div class="architecture-layer layer-infra">
+    <div class="layer-side-label">设施层</div>
+    <div class="layer-content">
+      <div class="group-row">
+        <div class="component-group">
+          <div class="group-title">异步 &amp; 调度</div>
+          <div class="component-grid">
+            <div class="comp pink">Asynq 任务队列<span class="tech">v0.26.0 · 6 Worker 池</span></div>
+            <div class="comp pink">ants 协程池<span class="tech">文档并发处理</span></div>
+            <div class="comp pink">Cron 定时调度<span class="tech">robfig/cron v3</span></div>
+            <div class="comp pink">事件总线 (Event Bus)<span class="tech">自研事件驱动</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">依赖注入 &amp; 配置</div>
+          <div class="component-grid">
+            <div class="comp pink">Uber Dig 依赖注入<span class="tech">v1.19.0 · 构造函数注入</span></div>
+            <div class="comp pink">Viper 配置管理<span class="tech">YAML + 环境变量</span></div>
+            <div class="comp pink">golang-migrate<span class="tech">数据库版本迁移</span></div>
+            <div class="comp pink">GORM ORM<span class="tech">v1.31.1</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">可观测性</div>
+          <div class="component-grid">
+            <div class="comp pink">OpenTelemetry<span class="tech">v1.43.0 · 链路追踪</span></div>
+            <div class="comp pink">Langfuse<span class="tech">LLM 评估/监控/Prompt</span></div>
+            <div class="comp pink">结构化日志<span class="tech">logrus + lumberjack</span></div>
+            <div class="comp pink">审计日志<span class="tech">操作全链路追踪</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">安全 &amp; 防护</div>
+          <div class="component-grid">
+            <div class="comp pink">SSRF 防护<span class="tech">DNS 白名单 + URL 校验</span></div>
+            <div class="comp pink">沙箱安全隔离<span class="tech">容器/微虚拟机/Seatbelt</span></div>
+            <div class="comp pink">数据脱敏<span class="tech">密钥/敏感字段</span></div>
+            <div class="comp pink">API 签名认证<span class="tech">HMAC 签名</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-arrow">▼</div>
+
+  <!-- 第6层：数据存储层 -->
+  <div class="architecture-layer layer-storage">
+    <div class="layer-side-label">存储层</div>
+    <div class="layer-content">
+      <div class="group-row">
+        <div class="component-group">
+          <div class="group-title">关系型数据库 (主存储)</div>
+          <div class="component-grid">
+            <div class="comp cyan">PostgreSQL<span class="tech">ParadeDB · BM25 + pgvector</span></div>
+            <div class="comp cyan">SQLite (Lite 模式)<span class="tech">sqlite-vec 向量扩展</span></div>
+            <div class="comp cyan">MySQL (可选)<span class="tech">Doris MySQL 协议</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">向量数据库</div>
+          <div class="component-grid">
+            <div class="comp cyan">pgvector (默认)<span class="tech">PostgreSQL 扩展</span></div>
+            <div class="comp cyan">Qdrant</div>
+            <div class="comp cyan">Milvus</div>
+            <div class="comp cyan">Weaviate</div>
+            <div class="comp cyan">腾讯云 VectorDB</div>
+            <div class="comp cyan">Elasticsearch v7/v8<span class="tech">BM25 + 向量</span></div>
+            <div class="comp cyan">OpenSearch</div>
+            <div class="comp cyan">Apache Doris</div>
+            <div class="comp cyan">sqlite-vec</div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">缓存 &amp; 队列</div>
+          <div class="component-grid">
+            <div class="comp cyan">Redis 7<span class="tech">go-redis v9.14.1</span></div>
+            <div class="comp cyan">Asynq 任务队列<span class="tech">基于 Redis</span></div>
+            <div class="comp cyan">SSE 流管理<span class="tech">Redis Stream / Memory</span></div>
+            <div class="comp cyan">分布式锁 &amp; 限流<span class="tech">Redis 实现</span></div>
+            <div class="comp cyan">配置发布订阅<span class="tech">Redis Pub/Sub</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="group-row" style="margin-top: 14px;">
+        <div class="component-group">
+          <div class="group-title">文件 &amp; 对象存储</div>
+          <div class="component-grid">
+            <div class="comp cyan">本地文件系统<span class="tech">默认存储</span></div>
+            <div class="comp cyan">MinIO<span class="tech">S3 兼容</span></div>
+            <div class="comp cyan">AWS S3</div>
+            <div class="comp cyan">腾讯云 COS</div>
+            <div class="comp cyan">阿里云 OSS</div>
+            <div class="comp cyan">火山引擎 TOS</div>
+            <div class="comp cyan">金山云 KS3</div>
+            <div class="comp cyan">华为云 OBS</div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">图存储 &amp; 分析</div>
+          <div class="component-grid">
+            <div class="comp cyan">Neo4j (可选)<span class="tech">知识图谱 / GraphRAG</span></div>
+            <div class="comp cyan">DuckDB<span class="tech">内嵌分析数据库</span></div>
+            <div class="comp cyan">ClickHouse (Langfuse)<span class="tech">可观测数据</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="layer-arrow">▼</div>
+
+  <!-- 第7层：外部依赖层 -->
+  <div class="architecture-layer layer-external">
+    <div class="layer-side-label">外部依赖</div>
+    <div class="layer-content">
+      <div class="group-row">
+        <div class="component-group">
+          <div class="group-title">第三方 AI 服务</div>
+          <div class="component-grid">
+            <div class="comp orange">OpenAI / Azure OpenAI</div>
+            <div class="comp orange">Anthropic Claude</div>
+            <div class="comp orange">Google Gemini</div>
+            <div class="comp orange">阿里通义 / 百炼</div>
+            <div class="comp orange">腾讯混元 / LKE</div>
+            <div class="comp orange">百度文心 / 千帆</div>
+            <div class="comp orange">智谱 GLM</div>
+            <div class="comp orange">DeepSeek / Moonshot</div>
+            <div class="comp orange">Ollama (本地)</div>
+            <div class="comp orange">... 共 32 家</div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">沙箱 &amp; 基础设施</div>
+          <div class="component-grid">
+            <div class="comp orange">E2B 云沙箱<span class="tech">远程沙箱服务</span></div>
+            <div class="comp orange">腾讯 CubeSandbox<span class="tech">微虚拟机沙箱</span></div>
+            <div class="comp orange">Dex (OIDC IdP)<span class="tech">企业 SSO</span></div>
+            <div class="comp orange">Langfuse 服务<span class="tech">LLM 可观测平台</span></div>
+          </div>
+        </div>
+        <div class="component-group">
+          <div class="group-title">搜索 &amp; 数据源</div>
+          <div class="component-grid">
+            <div class="comp orange">SearXNG 元搜索<span class="tech">自托管搜索引擎</span></div>
+            <div class="comp orange">Tavily / Exa / Serply<span class="tech">AI 搜索 API</span></div>
+            <div class="comp orange">飞书 / 语雀 / Notion<span class="tech">知识源同步</span></div>
+            <div class="comp orange">Confluence / GitLab<span class="tech">企业知识源</span></div>
+            <div class="comp orange">第三方 MCP Servers<span class="tech">模型上下文协议</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend-section">
+    <div class="legend-title">图例说明</div>
+    <div class="legend-grid">
+      <div class="legend-item"><div class="legend-swatch" style="background:#eef2ff;border-color:#4f46e5;"></div>接入层：客户端与渠道</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#ecfdf5;border-color:#059669;"></div>网关层：路由与安全</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#fffbeb;border-color:#d97706;"></div>应用层：业务能力</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#f5f3ff;border-color:#7c3aed;"></div>服务层：领域与微服务</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#fdf2f8;border-color:#db2777;"></div>设施层：基础框架</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#ecfeff;border-color:#0891b2;"></div>存储层：数据持久化</div>
+      <div class="legend-item"><div class="legend-swatch" style="background:#fef3c7;border-color:#b45309;"></div>外部依赖：第三方服务</div>
+    </div>
+    <div class="footer-note">
+      WeKnora v0.8.2 系统架构图 · 基于源码分析整理 · Go 1.26.0 + Gin + GORM + Uber Dig · Vue 3 + TDesign + Vite 7 · Python DocReader (gRPC) · Wails Desktop
+      <br>部署形态：Docker Compose 完整版 / Helm K8s / Lite 单二进制 / 桌面端 · 多租户 · RBAC · 审计日志
+    </div>
+  </div>
+</div>
+</body>
+</html>

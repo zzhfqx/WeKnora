@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WeKnora 部署架构图</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    background: #f0f2f5;
+    padding: 30px 16px;
+    color: #1a2332;
+  }
+  .diagram {
+    max-width: 1320px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    padding: 28px 36px;
+  }
+
+  /* Title */
+  .title-bar {
+    text-align: center;
+    padding-bottom: 14px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #1976d2;
+    position: relative;
+  }
+  .title-bar h1 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #0d47a1;
+    letter-spacing: 4px;
+  }
+  .title-bar .sub {
+    font-size: 13px;
+    color: #607d8b;
+    margin-top: 6px;
+  }
+  .title-bar .version {
+    position: absolute;
+    right: 0;
+    top: 6px;
+    font-size: 12px;
+    color: #78909c;
+    background: #eceff1;
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  /* Server info bar */
+  .server-info {
+    background: linear-gradient(90deg, #e3f2fd 0%, #e8eaf6 100%);
+    border: 1.5px solid #90caf9;
+    border-radius: 6px;
+    padding: 12px 18px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    align-items: center;
+  }
+  .si-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0d47a1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .si-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    flex: 1;
+  }
+  .si-item {
+    font-size: 12px;
+    color: #37474f;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .si-item .label { color: #78909c; }
+  .si-item .value { font-weight: 700; color: #1565c0; font-family: 'Consolas', monospace; }
+
+  /* Host frame */
+  .host-frame {
+    border: 2.5px solid #0d47a1;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+    background: #fff;
+  }
+  .host-header {
+    background: linear-gradient(90deg, #0d47a1 0%, #1565c0 100%);
+    color: #fff;
+    padding: 9px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .host-header .left { display: flex; align-items: center; gap: 8px; }
+  .host-header .right { font-size: 11px; font-weight: 400; opacity: 0.9; }
+
+  /* Docker layer */
+  .docker-layer {
+    background: repeating-linear-gradient(
+      45deg,
+      #fafafa,
+      #fafafa 6px,
+      #f5f5f5 6px,
+      #f5f5f5 12px
+    );
+    padding: 14px 16px 16px;
+    border-bottom: 1px dashed #90caf9;
+    position: relative;
+  }
+  .docker-layer-label {
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: #fff;
+    padding: 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #0d47a1;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Zone (network) */
+  .zone {
+    border: 2px solid;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .zone:last-child { margin-bottom: 0; }
+
+  .zone-header {
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .zone-header .right { font-size: 10px; font-weight: 400; opacity: 0.85; letter-spacing: 0.5px; }
+
+  .zone-dmz { border-color: #1565c0; }
+  .zone-dmz .zone-header { background: linear-gradient(90deg, #1565c0, #1976d2); }
+
+  .zone-app { border-color: #2e7d32; }
+  .zone-app .zone-header { background: linear-gradient(90deg, #2e7d32, #388e3c); }
+
+  .zone-data { border-color: #c62828; }
+  .zone-data .zone-header { background: linear-gradient(90deg, #c62828, #d32f2f); }
+
+  .zone-body {
+    padding: 14px 16px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: center;
+  }
+
+  /* Container card */
+  .ctn-card {
+    background: #fff;
+    border: 1.5px solid #cfd8dc;
+    border-radius: 6px;
+    padding: 10px 12px;
+    min-width: 200px;
+    max-width: 250px;
+    flex: 1;
+    position: relative;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    border-top: 3px solid;
+    transition: box-shadow 0.2s;
+  }
+  .ctn-card:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.1); }
+
+  .ctn-card.front { border-top-color: #1565c0; background: #f5faff; }
+  .ctn-card.app { border-top-color: #2e7d32; background: #f8fbf8; }
+  .ctn-card.worker { border-top-color: #6a1b9a; background: #faf6fc; }
+  .ctn-card.db { border-top-color: #c62828; background: #fff8f8; }
+  .ctn-card.cache { border-top-color: #ef6c00; background: #fffaf3; }
+  .ctn-card.storage { border-top-color: #00838f; background: #f3fcfc; }
+  .ctn-card.opt { border-top-color: #7b1fa2; border-style: dashed; background: #fbf5fd; }
+
+  .ctn-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+    padding-bottom: 5px;
+    border-bottom: 1px dashed #e0e0e0;
+  }
+  .ctn-icon { font-size: 15px; }
+  .ctn-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #263238;
+    flex: 1;
+  }
+  .ctn-tag {
+    font-size: 9px;
+    padding: 1px 6px;
+    border-radius: 2px;
+    font-weight: 700;
+    color: #fff;
+    background: #0d47a1;
+    letter-spacing: 0.5px;
+  }
+  .ctn-tag.opt { background: #7b1fa2; }
+
+  .ctn-image {
+    font-size: 10px;
+    color: #607d8b;
+    font-family: 'Consolas', monospace;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .ctn-image::before { content: '🐳'; font-size: 10px; }
+
+  .ctn-list {
+    list-style: none;
+    font-size: 11px;
+    color: #455a64;
+    line-height: 1.6;
+  }
+  .ctn-list li {
+    padding-left: 12px;
+    position: relative;
+  }
+  .ctn-list li::before {
+    content: '';
+    position: absolute;
+    left: 2px;
+    top: 7px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #90a4ae;
+  }
+
+  /* Cluster group */
+  .cluster {
+    border: 1.5px dashed #b0bec5;
+    border-radius: 6px;
+    padding: 14px 12px 10px;
+    position: relative;
+    flex: 1;
+    min-width: 300px;
+    background: #fafbfc;
+  }
+  .cluster-label {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: #fafbfc;
+    padding: 0 8px;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #546e7a;
+    letter-spacing: 1px;
+  }
+  .cluster-inner {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Arrow between zones */
+  .zone-arrow {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 5px 0;
+    background: #e8eaf6;
+    border-left: 2px solid #1565c0;
+    border-right: 2px solid #1565c0;
+  }
+  .zone-arrow .arrow-text {
+    font-size: 10.5px;
+    color: #283593;
+    background: #fff;
+    padding: 2px 12px;
+    border-radius: 10px;
+    border: 1px solid #c5cae9;
+    font-weight: 600;
+  }
+
+  /* Volume row */
+  .volume-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #fff3e0;
+    border-top: 1px dashed #ffcc80;
+    justify-content: center;
+    align-items: center;
+  }
+  .vol-title {
+    font-size: 10.5px;
+    color: #e65100;
+    font-weight: 700;
+    padding: 3px 4px;
+  }
+  .vol-item {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    background: #fff;
+    border: 1px solid #ffcc80;
+    border-radius: 3px;
+    color: #bf360c;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .vol-item::before { content: '💾'; font-size: 10px; }
+
+  /* Optional services row */
+  .opt-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #f3e5f5;
+    border-top: 1px dashed #ce93d8;
+    justify-content: center;
+    align-items: center;
+  }
+  .opt-title {
+    font-size: 10.5px;
+    color: #6a1b9a;
+    font-weight: 700;
+    padding: 3px 4px;
+  }
+  .opt-chip {
+    font-size: 10.5px;
+    padding: 3px 8px;
+    background: #fff;
+    border: 1px solid #ce93d8;
+    border-radius: 3px;
+    color: #6a1b9a;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .opt-chip::before { content: '🐳'; font-size: 10px; }
+
+  /* External */
+  .ext-box {
+    margin-top: 16px;
+    border: 2px solid #546e7a;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .ext-header {
+    background: linear-gradient(90deg, #546e7a, #607d8b);
+    color: #fff;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 2px;
+  }
+  .ext-body {
+    padding: 10px 14px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    background: #fafbfc;
+  }
+  .ext-item {
+    font-size: 11px;
+    padding: 4px 10px;
+    background: #fff;
+    border: 1px solid #b0bec5;
+    border-radius: 3px;
+    color: #37474f;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  /* Feature cards */
+  .feature-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .fc-card {
+    background: #f5f7fa;
+    border-left: 4px solid #1565c0;
+    padding: 10px 14px;
+    border-radius: 0 4px 4px 0;
+  }
+  .fc-card.green { border-left-color: #2e7d32; }
+  .fc-card.orange { border-left-color: #ef6c00; }
+  .fc-card.purple { border-left-color: #7b1fa2; }
+  .fc-card.teal { border-left-color: #00838f; }
+  .fc-card.red { border-left-color: #c62828; }
+  .fc-card h5 {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #263238;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .fc-card p {
+    font-size: 11px;
+    color: #546e7a;
+    line-height: 1.6;
+  }
+
+  /* Service list */
+  .svc-list {
+    margin-top: 20px;
+    border: 1px solid #cfd8dc;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .svc-header {
+    background: #eceff1;
+    padding: 8px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #37474f;
+    letter-spacing: 1px;
+  }
+  .svc-header::before { content: '📦 '; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11.5px;
+  }
+  th, td {
+    padding: 7px 12px;
+    text-align: left;
+    border-bottom: 1px solid #eceff1;
+  }
+  th {
+    background: #f5f7fa;
+    font-weight: 700;
+    color: #455a64;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+  }
+  td { color: #37474f; }
+  td.img {
+    font-family: 'Consolas', monospace;
+    font-size: 10.5px;
+    color: #546e7a;
+  }
+  .type-core { color: #c62828; font-weight: 600; }
+  .type-app { color: #2e7d32; font-weight: 600; }
+  .type-front { color: #1565c0; font-weight: 600; }
+  .type-opt { color: #7b1fa2; font-weight: 600; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafbfc; }
+
+  /* Legend */
+  .legend {
+    margin-top: 18px;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    padding: 12px 18px;
+  }
+  .legend-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #37474f;
+    margin-bottom: 8px;
+  }
+  .legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: #546e7a;
+  }
+  .legend-box {
+    width: 28px;
+    height: 12px;
+    border-radius: 2px;
+    border: 1px solid #b0bec5;
+    border-top: 3px solid;
+  }
+  .legend-box.dashed { border-style: dashed; }
+
+  /* User access row */
+  .user-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 0 14px;
+    flex-wrap: wrap;
+  }
+  .user-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #37474f;
+    background: #fff;
+    border: 1px solid #cfd8dc;
+    padding: 6px 14px;
+    border-radius: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  }
+  .user-icon { font-size: 16px; }
+
+  .footer {
+    text-align: center;
+    font-size: 11px;
+    color: #90a4ae;
+    margin-top: 14px;
+    line-height: 1.8;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 10px;
+  }
+
+  @media (max-width: 900px) {
+    .cluster { min-width: 100%; }
+    .cluster-inner { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="diagram">
+
+  <!-- 标题 -->
+  <div class="title-bar">
+    <span class="version">v0.8.2</span>
+    <h1>WeKnora 部署架构图</h1>
+    <div class="sub">Docker Compose 容器化部署 · 企业级知识库与智能体平台</div>
+  </div>
+
+  <!-- 服务器配置 -->
+  <div class="server-info">
+    <div class="si-title">🖥️ 部署服务器</div>
+    <div class="si-items">
+      <div class="si-item"><span class="label">IP：</span><span class="value">192.168.21.10</span></div>
+      <div class="si-item"><span class="label">系统：</span><span class="value">Linux 6.8.0</span></div>
+      <div class="si-item"><span class="label">CPU：</span><span class="value">40 核</span></div>
+      <div class="si-item"><span class="label">内存：</span><span class="value">78 GB</span></div>
+      <div class="si-item"><span class="label">存储：</span><span class="value">8.2 TB</span></div>
+      <div class="si-item"><span class="label">容器引擎：</span><span class="value">Docker Engine</span></div>
+    </div>
+  </div>
+
+  <!-- 用户接入 -->
+  <div class="user-row">
+    <div class="user-item"><span class="user-icon">🌐</span>Web 浏览器</div>
+    <div class="user-item"><span class="user-icon">💻</span>桌面客户端</div>
+    <div class="user-item"><span class="user-icon">📱</span>微信小程序</div>
+    <div class="user-item"><span class="user-icon">💬</span>IM 平台</div>
+    <div class="user-item"><span class="user-icon">🔌</span>API / Embedded</div>
+    <div style="font-size:18px;">↓</div>
+  </div>
+
+  <!-- 主机大框 -->
+  <div class="host-frame">
+    <div class="host-header">
+      <div class="left">🏠 应用服务器（192.168.21.10）</div>
+      <div class="right">编排方式：Docker Compose · 项目名：weknora</div>
+    </div>
+
+    <div class="docker-layer">
+      <div class="docker-layer-label">🐳 Docker Engine · 容器运行时</div>
+
+      <!-- DMZ 区 / 前端 -->
+      <div class="zone zone-dmz">
+        <div class="zone-header">
+          <span>🌐 DMZ 区 · 前端接入层</span>
+          <span class="right">静态资源 + 反向代理</span>
+        </div>
+        <div class="zone-body">
+          <div class="ctn-card front" style="flex:1; max-width:360px;">
+            <div class="ctn-head">
+              <span class="ctn-icon">⚡</span>
+              <span class="ctn-name">前端 Web 服务</span>
+              <span class="ctn-tag">前端</span>
+            </div>
+            <div class="ctn-image">weknora/frontend（Nginx）</div>
+            <ul class="ctn-list">
+              <li>Vue 3 + TDesign SPA 单页应用</li>
+              <li>Nginx 提供静态资源服务</li>
+              <li>反向代理后端 API 请求</li>
+              <li>支持多语言（中文/英文）</li>
+              <li>响应式布局，适配多端</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="zone-arrow">
+        <span class="arrow-text">HTTP / HTTPS · 反向代理</span>
+      </div>
+
+      <!-- 应用区 -->
+      <div class="zone zone-app">
+        <div class="zone-header">
+          <span>⚙️ 应用区 · 业务服务层</span>
+          <span class="right">核心应用 + 微服务 + 异步工作器</span>
+        </div>
+        <div class="zone-body">
+          <div class="cluster" style="background:#f1f8f1; border-color:#a5d6a7; flex:1.5;">
+            <div class="cluster-label" style="background:#f1f8f1; color:#2e7d32;">核心应用服务</div>
+            <div class="cluster-inner">
+              <div class="ctn-card app" style="flex:1;">
+                <div class="ctn-head">
+                  <span class="ctn-icon">🚀</span>
+                  <span class="ctn-name">WeKnora App</span>
+                  <span class="ctn-tag">核心</span>
+                </div>
+                <div class="ctn-image">weknora/server（Go 二进制）</div>
+                <ul class="ctn-list">
+                  <li>Go + Gin RESTful API 服务</li>
+                  <li>知识管理 / 对话 / Agent 引擎</li>
+                  <li>认证鉴权 / 权限管理</li>
+                  <li>WebSocket & SSE 流式响应</li>
+                  <li>32+ 大模型接入能力</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="cluster" style="background:#faf5fc; border-color:#ce93d8; flex:1;">
+            <div class="cluster-label" style="background:#faf5fc; color:#6a1b9a;">文档解析微服务</div>
+            <div class="cluster-inner">
+              <div class="ctn-card worker" style="flex:1;">
+                <div class="ctn-head">
+                  <span class="ctn-icon">📄</span>
+                  <span class="ctn-name">DocReader</span>
+                  <span class="ctn-tag">微服务</span>
+                </div>
+                <div class="ctn-image">wechatopenai/weknora-docreader</div>
+                <ul class="ctn-list">
+                  <li>Python gRPC 服务</li>
+                  <li>25+ 文件格式解析</li>
+                  <li>MinerU / AnyDoc 解析引擎</li>
+                  <li>Playwright 网页渲染</li>
+                  <li>独立部署，弹性扩展</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="zone-arrow">
+        <span class="arrow-text">TCP / gRPC / Redis 协议 · 内部通信</span>
+      </div>
+
+      <!-- 数据区 -->
+      <div class="zone zone-data">
+        <div class="zone-header">
+          <span>💾 数据区 · 存储服务层</span>
+          <span class="right">数据库 + 缓存 + 对象存储</span>
+        </div>
+        <div class="zone-body">
+
+          <div class="ctn-card db" style="flex:1;">
+            <div class="ctn-head">
+              <span class="ctn-icon">🐘</span>
+              <span class="ctn-name">PostgreSQL</span>
+              <span class="ctn-tag">核心</span>
+            </div>
+            <div class="ctn-image">paradedb/paradedb:v0.22.6-pg17</div>
+            <ul class="ctn-list">
+              <li>主业务关系数据库</li>
+              <li>pgvector 向量检索扩展</li>
+              <li>BM25 全文检索能力</li>
+              <li>golang-migrate 版本管理</li>
+            </ul>
+          </div>
+
+          <div class="ctn-card cache" style="flex:1;">
+            <div class="ctn-head">
+              <span class="ctn-icon">🔴</span>
+              <span class="ctn-name">Redis</span>
+              <span class="ctn-tag">核心</span>
+            </div>
+            <div class="ctn-image">redis:7.0-alpine</div>
+            <ul class="ctn-list">
+              <li>分布式数据缓存</li>
+              <li>Asynq 异步任务队列</li>
+              <li>限流 / 分布式锁</li>
+              <li>配置变更 Pub/Sub</li>
+            </ul>
+          </div>
+
+          <div class="ctn-card storage" style="flex:1;">
+            <div class="ctn-head">
+              <span class="ctn-icon">📦</span>
+              <span class="ctn-name">MinIO</span>
+              <span class="ctn-tag">对象存储</span>
+            </div>
+            <div class="ctn-image">minio/minio</div>
+            <ul class="ctn-list">
+              <li>S3 兼容对象存储</li>
+              <li>文件 / 图片持久化存储</li>
+              <li>多副本冗余保护</li>
+              <li>Bucket 生命周期管理</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- 可选服务行 -->
+        <div class="opt-row">
+          <span class="opt-title">🔧 可选服务（按需启用）：</span>
+          <div class="opt-chip">Neo4j · 知识图谱</div>
+          <div class="opt-chip">Qdrant · 向量数据库</div>
+          <div class="opt-chip">Milvus · 向量数据库</div>
+          <div class="opt-chip">Weaviate · 向量数据库</div>
+          <div class="opt-chip">SearXNG · 元搜索引擎</div>
+          <div class="opt-chip">Langfuse · 可观测性</div>
+          <div class="opt-chip">Dex · OIDC 身份</div>
+          <div class="opt-chip">Elasticsearch · 全文检索</div>
+        </div>
+
+        <!-- 数据卷行 -->
+        <div class="volume-row">
+          <span class="vol-title">💽 数据持久化卷：</span>
+          <div class="vol-item">postgres-data（业务数据）</div>
+          <div class="vol-item">redis-data（缓存快照）</div>
+          <div class="vol-item">minio-data（对象文件）</div>
+          <div class="vol-item">docreader-tmp（解析共享）</div>
+          <div class="vol-item">app-logs（应用日志）</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 外部依赖 -->
+  <div class="ext-box">
+    <div class="ext-header">🌐 外部依赖服务</div>
+    <div class="ext-body">
+      <div class="ext-item">🧠 LLM 大模型（32+ 厂商）</div>
+      <div class="ext-item">🏢 企业 SSO / OIDC IdP</div>
+      <div class="ext-item">🔍 Web 搜索 API</div>
+      <div class="ext-item">🔗 MCP Servers</div>
+      <div class="ext-item">📂 企业知识源（飞书/语雀/钉钉）</div>
+      <div class="ext-item">🐳 代码沙箱（E2B / Cube）</div>
+      <div class="ext-item">☁️ 公有云存储</div>
+      <div class="ext-item">📧 消息通知通道</div>
+    </div>
+  </div>
+
+  <!-- 核心特性 -->
+  <div class="feature-cards">
+    <div class="fc-card">
+      <h5>🐳 容器化部署</h5>
+      <p>全部服务 Docker 容器化，Docker Compose 一键编排，环境一致性，部署运维简单</p>
+    </div>
+    <div class="fc-card green">
+      <h5>📦 模块化架构</h5>
+      <p>前端、后端、文档解析、数据存储分层解耦，可独立扩展，微服务化架构</p>
+    </div>
+    <div class="fc-card orange">
+      <h5>💾 数据持久化</h5>
+      <p>所有有状态服务均使用 Docker Volume 持久化，容器重建不丢失数据</p>
+    </div>
+    <div class="fc-card purple">
+      <h5>🔌 插件化扩展</h5>
+      <p>向量库、搜索引擎、知识源、沙箱均支持插件化接入，按需启用无需全量部署</p>
+    </div>
+    <div class="fc-card teal">
+      <h5>🛡️ 安全隔离</h5>
+      <p>容器网络隔离，内部服务不对外暴露，仅前端接入层可外部访问</p>
+    </div>
+    <div class="fc-card red">
+      <h5>📈 弹性扩展</h5>
+      <p>无状态服务（App、DocReader）可水平扩展，有状态服务支持集群模式升级</p>
+    </div>
+  </div>
+
+  <!-- 服务清单 -->
+  <div class="svc-list">
+    <div class="svc-header">Docker Compose 服务清单</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:80px;">层级</th>
+          <th style="width:140px;">服务名</th>
+          <th>镜像</th>
+          <th style="width:100px;">类型</th>
+          <th>说明</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>接入层</td>
+          <td>frontend</td>
+          <td class="img">weknora/frontend</td>
+          <td><span class="type-front">前端</span></td>
+          <td>Nginx 静态资源 + 反向代理</td>
+        </tr>
+        <tr>
+          <td>应用层</td>
+          <td>server</td>
+          <td class="img">weknora/server</td>
+          <td><span class="type-app">核心</span></td>
+          <td>Go 后端主服务，API + Agent + 业务逻辑</td>
+        </tr>
+        <tr>
+          <td>应用层</td>
+          <td>docreader</td>
+          <td class="img">wechatopenai/weknora-docreader</td>
+          <td><span class="type-app">微服务</span></td>
+          <td>Python gRPC 文档解析服务</td>
+        </tr>
+        <tr>
+          <td>数据层</td>
+          <td>postgres</td>
+          <td class="img">paradedb/paradedb</td>
+          <td><span class="type-core">核心</span></td>
+          <td>业务主库 + pgvector 向量 + BM25 检索</td>
+        </tr>
+        <tr>
+          <td>数据层</td>
+          <td>redis</td>
+          <td class="img">redis:7.0-alpine</td>
+          <td><span class="type-core">核心</span></td>
+          <td>缓存 + 异步任务队列 + 分布式锁</td>
+        </tr>
+        <tr>
+          <td>数据层</td>
+          <td>minio</td>
+          <td class="img">minio/minio</td>
+          <td><span class="type-core">核心</span></td>
+          <td>S3 兼容对象存储服务</td>
+        </tr>
+        <tr>
+          <td>可选</td>
+          <td>neo4j</td>
+          <td class="img">neo4j</td>
+          <td><span class="type-opt">可选</span></td>
+          <td>知识图谱数据库（GraphRAG）</td>
+        </tr>
+        <tr>
+          <td>可选</td>
+          <td>qdrant / milvus / weaviate</td>
+          <td class="img">—</td>
+          <td><span class="type-opt">可选</span></td>
+          <td>专用向量数据库（10+ 种可选）</td>
+        </tr>
+        <tr>
+          <td>可选</td>
+          <td>searxng</td>
+          <td class="img">searxng/searxng</td>
+          <td><span class="type-opt">可选</span></td>
+          <td>元搜索引擎，聚合多个搜索源</td>
+        </tr>
+        <tr>
+          <td>可选</td>
+          <td>langfuse</td>
+          <td class="img">langfuse/langfuse</td>
+          <td><span class="type-opt">可选</span></td>
+          <td>LLM 可观测性与追踪平台</td>
+        </tr>
+        <tr>
+          <td>可选</td>
+          <td>dex</td>
+          <td class="img">dexidp/dex</td>
+          <td><span class="type-opt">可选</span></td>
+          <td>OIDC 身份提供者，企业 SSO</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-title">图例说明</div>
+    <div class="legend-row">
+      <div class="legend-item"><div class="legend-box" style="border-top-color:#1565c0; background:#f5faff;"></div>前端接入服务</div>
+      <div class="legend-item"><div class="legend-box" style="border-top-color:#2e7d32; background:#f8fbf8;"></div>核心应用服务</div>
+      <div class="legend-item"><div class="legend-box" style="border-top-color:#6a1b9a; background:#faf6fc;"></div>微服务 / 工作器</div>
+      <div class="legend-item"><div class="legend-box" style="border-top-color:#c62828; background:#fff8f8;"></div>核心数据库</div>
+      <div class="legend-item"><div class="legend-box" style="border-top-color:#ef6c00; background:#fffaf3;"></div>缓存 / 队列</div>
+      <div class="legend-item"><div class="legend-box" style="border-top-color:#00838f; background:#f3fcfc;"></div>对象存储</div>
+      <div class="legend-item"><div class="legend-box dashed" style="border-top-color:#7b1fa2; background:#fbf5fd;"></div>可选服务</div>
+      <div class="legend-item">💾 Docker Volume 数据卷</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    WeKnora 部署架构图 · v0.8.2
+    <br>
+    部署方式：Docker Compose 容器化部署 &nbsp;|&nbsp; 服务器：192.168.21.10 · 40核 · 78GB · 8.2TB
+  </div>
+</div>
+</body>
+</html>
