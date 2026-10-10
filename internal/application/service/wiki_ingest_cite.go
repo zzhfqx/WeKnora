@@ -545,3 +545,453 @@ func mergeCitationsIntoItems(
 
 	return entities, concepts, uncited
 }
+
+// ============================================================
+// 法规场景本体（Regulation Scenario Ontology）提取函数
+// ============================================================
+
+// generateRegulationPages 生成法规详情页 + 精简摘要页 + 法规元数据。
+// 一次LLM调用输出JSON，包含三个字段：
+//   - detail_content: 法规详情页（entity类型，"法规"目录下）
+//   - regulation_meta: 结构化元数据
+//
+// 这是法规场景体系A的Phase 1——摘要式生成（整文处理），
+// 不是chunk级提取。
+//
+// 注意：法规精简摘要页不再在这里生成，而是走通用 summary 生成机制，
+// 只是法规场景下使用精简版提示词（WikiRegulationSummaryPrompt）。
+func (s *wikiIngestService) generateRegulationPages(
+	ctx context.Context,
+	chatModel chat.Chat,
+	content, lang, docTitle string,
+	batchCtx *WikiBatchContext,
+) (detailContent string, meta regulationDocMeta, err error) {
+	const maxAttempts = 3
+	var lastErr error
+
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		raw, genErr := s.generateWithTemplate(ctx, chatModel,
+			agent.WikiRegulationPageGenPrompt, map[string]string{
+				"Content":            content,
+				"Language":           lang,
+				"DocTitle":           docTitle,
+				"CustomInstructions": batchCtx.ContentInstructions,
+			})
+		if genErr != nil {
+			lastErr = fmt.Errorf("generate regulation pages: %w", genErr)
+			continue
+		}
+
+		raw = cleanLLMJSON(raw)
+		if raw == "" {
+			lastErr = fmt.Errorf("generate regulation pages: empty response")
+			continue
+		}
+
+		// 尝试提取第一个完整的 JSON 对象（LLM 有时会在 JSON 后输出多余内容）
+		raw = extractFirstJSONObject(raw)
+		if raw == "" {
+			lastErr = fmt.Errorf("generate regulation pages: no valid JSON object found")
+			continue
+		}
+
+		var parsed struct {
+			RegulationMeta regulationDocMeta `json:"regulation_meta"`
+			DetailContent  string            `json:"detail_content"`
+		}
+		if parseErr := json.Unmarshal([]byte(raw), &parsed); parseErr != nil {
+			preview := raw
+			if len(preview) > 500 {
+				preview = preview[:500] + "..."
+			}
+			logger.Warnf(ctx, "wiki ingest: regulation pages parse failed (attempt %d/%d), raw preview: %s",
+				attempt, maxAttempts, preview)
+			lastErr = fmt.Errorf("parse regulation pages: %w", parseErr)
+			continue
+		}
+
+		logger.Infof(ctx, "wiki ingest: regulation pages generated (attempt %d) — short_title=%q, doc_number=%q, detail_len=%d",
+			attempt, parsed.RegulationMeta.ShortTitle, parsed.RegulationMeta.DocNumber, len(parsed.DetailContent))
+
+		return parsed.DetailContent, parsed.RegulationMeta, nil
+	}
+
+	return "", regulationDocMeta{}, lastErr
+}
+
+// extractFirstJSONObject 从字符串中提取第一个完整的 JSON 对象。
+// LLM 有时会在合法 JSON 后面追加说明文字或多余的 }，导致解析失败。
+// 这个函数通过括号匹配找到第一个 { 到配对的 } 的子串。
+// 如果找不到合法 JSON，返回空字符串。
+func extractFirstJSONObject(s string) string {
+	s = strings.TrimSpace(s)
+
+	// 找到第一个 {
+	first := strings.Index(s, "{")
+	if first < 0 {
+		return ""
+	}
+
+	// 括号匹配
+	depth := 0
+	inString := false
+	escape := false
+	for i := first; i < len(s); i++ {
+		ch := s[i]
+		if escape {
+			escape = false
+			continue
+		}
+		if ch == '\\' {
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		if ch == '{' {
+			depth++
+		} else if ch == '}' {
+			depth--
+			if depth == 0 {
+				return s[first : i+1]
+			}
+		}
+	}
+
+	return ""
+}
+
+// extractRegulationCandidateSlugs 从法规文档中提取制度性条款和核心业务对象。
+// 这是法规场景体系A的Phase 2——chunk级提取。
+//
+// 返回值：
+//   - clauses: 制度性条款列表（entity/clause-xxx）
+//   - businessObjects: 核心业务对象列表（entity/<name>）
+//   - slugItems: 统一的 slug -> extractedItem 映射（包含条款和业务对象）
+func (s *wikiIngestService) extractRegulationCandidateSlugs(
+	ctx context.Context,
+	chatModel chat.Chat,
+	kbID string,
+	content, lang string,
+	oldPageSlugs map[string]bool,
+	batchCtx *WikiBatchContext,
+	docTitle string,
+) (clauses []extractedItem, businessObjects []extractedItem,
+	slugItems map[string]extractedItem, err error) {
+
+	// 构造旧 slug 列表文本（只包含 entity/ 前缀的页面，
+	// 因为法规场景的条款和业务对象都是 entity/ 前缀）
+	var prevSlugsText string
+	if len(oldPageSlugs) > 0 {
+		var sb strings.Builder
+		for slug := range oldPageSlugs {
+			if !strings.HasPrefix(slug, "entity/") {
+				continue
+			}
+			fmt.Fprintf(&sb, "- %s\n", slug)
+		}
+		prevSlugsText = sb.String()
+	}
+	if prevSlugsText == "" {
+		prevSlugsText = "(none — this is a new document)"
+	}
+
+	raw, err := s.generateWithTemplate(ctx, chatModel,
+		agent.WikiRegulationExtractPrompt, map[string]string{
+			"Content":            content,
+			"Language":           lang,
+			"PreviousSlugs":      prevSlugsText,
+			"DocTitle":           docTitle,
+			"CustomInstructions": batchCtx.ExtractionInstructions,
+		})
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("extract regulation candidates: %w", err)
+	}
+
+	raw = cleanLLMJSON(raw)
+	if raw == "" {
+		return nil, nil, nil, fmt.Errorf("extract regulation candidates: empty response")
+	}
+
+	var result regulationExtractionResult
+	if err := json.Unmarshal([]byte(raw), &result); err != nil {
+		return nil, nil, nil, fmt.Errorf("parse regulation candidates: %w", err)
+	}
+
+	// 去重：业务对象 → entities 通道，条款 → concepts 通道
+	// （复用现有 deduplicateExtractedBatch 机制）
+	result.BusinessObjects, result.Clauses = s.deduplicateExtractedBatch(
+		ctx, chatModel, kbID, result.BusinessObjects, result.Clauses, batchCtx,
+	)
+
+	// 过滤内容不足的条款和业务对象。
+	// 判断标准：
+	//   1. description 为空 → 过滤（连一句话概述都没有，完全没价值）
+	//   2. details 字符数 < 100 → 过滤（内容太少，生成的页面大部分是"暂无"空壳）
+	// description 只判断是否为空，不限制字数（有一句话概述就够）。
+	clauseCountBefore := len(result.Clauses)
+	boCountBefore := len(result.BusinessObjects)
+	result.Clauses = filterInsufficientExtractedItems(result.Clauses)
+	result.BusinessObjects = filterInsufficientExtractedItems(result.BusinessObjects)
+	logger.Infof(ctx, "wiki ingest: before filter — clauses=%d, business_objects=%d",
+		clauseCountBefore, boCountBefore)
+	if len(result.Clauses) < clauseCountBefore || len(result.BusinessObjects) < boCountBefore {
+		logger.Infof(ctx, "wiki ingest: filtered insufficient items — clauses %d→%d, business_objects %d→%d",
+			clauseCountBefore, len(result.Clauses), boCountBefore, len(result.BusinessObjects))
+	} else {
+		logger.Infof(ctx, "wiki ingest: no items filtered — all items passed")
+	}
+
+	// 组装统一的 slugItems 映射
+	slugItems = make(map[string]extractedItem,
+		len(result.Clauses)+len(result.BusinessObjects))
+	for _, item := range result.Clauses {
+		slugItems[item.Slug] = item
+	}
+	for _, item := range result.BusinessObjects {
+		slugItems[item.Slug] = item
+	}
+
+	return result.Clauses, result.BusinessObjects, slugItems, nil
+}
+
+// filterInsufficientExtractedItems 过滤内容不足的提取项。
+//
+// 过滤规则：
+//   1. description 为空 → 过滤（连一句话概述都没有，完全没价值）
+//   2. details 字符数 < 100 → 过滤（内容太少，生成的页面大部分是"暂无"空壳）
+//
+// description 只判断是否为空，不限制字数（有一句话概述就够）。
+// 主要看 details 有没有足够的实质内容，details 太少的话，
+// reduce 阶段用编辑模板生成的页面会大面积出现"暂无"，没有保存价值。
+func filterInsufficientExtractedItems(items []extractedItem) []extractedItem {
+	if len(items) == 0 {
+		return items
+	}
+	const minDetailsLen = 200 // details 最少字符数
+	filtered := make([]extractedItem, 0, len(items))
+	for _, item := range items {
+		// 规则1：description 为空 → 过滤
+		if item.Description == "" {
+			continue
+		}
+		// 规则2：details 字符数 < 100 → 过滤
+		if len(item.Details) < minDetailsLen {
+			continue
+		}
+		filtered = append(filtered, item)
+	}
+	return filtered
+}
+
+// removeRegulationJumpLines 从摘要内容中删除所有包含"查看完整法规详情"的行。
+// LLM 生成摘要时可能会自己生成跳转链接（格式不一定正确），
+// 注入正确链接前先清理掉旧的，确保最终只有一个正确的跳转链接。
+func removeRegulationJumpLines(content string) string {
+	lines := strings.Split(content, "\n")
+	filtered := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if !strings.Contains(line, "查看完整法规详情") {
+			filtered = append(filtered, line)
+		}
+	}
+	result := strings.Join(filtered, "\n")
+	// 清理末尾多余的空行
+	return strings.TrimRight(result, "\n")
+}
+
+// clauseQualityCheckResult 单页质量检查结果
+type clauseQualityCheckResult struct {
+	Slug    string `json:"slug"`
+	IsValid bool   `json:"is_valid"`
+	Reason  string `json:"reason"`
+}
+
+// checkClausePageQuality 批量检查条款页面质量，删除无效页面（空壳/占位/内容不足）。
+// 只处理 entity/clause-* 前缀的页面，其他类型页面直接跳过。
+// 返回被删除的 slug 列表（用于后续空目录清理等）。
+//
+// 设计：
+//   - 分批处理（默认每批 clauseQualityBatchSize 个），控制单次 LLM 调用的 token 量
+//   - LLM 返回 JSON 数组，每个元素含 slug + is_valid + reason
+//   - 解析失败的批次记录 warning 但不删除（保守策略：不删不确定的）
+func (s *wikiIngestService) checkClausePageQuality(
+	ctx context.Context,
+	kbID string,
+	affectedSlugs []string,
+	chatModel chat.Chat,
+	batchCtx *WikiBatchContext,
+) []string {
+	if len(affectedSlugs) == 0 || chatModel == nil {
+		return nil
+	}
+	// 只处理法规场景
+	if batchCtx == nil || batchCtx.SceneType != types.WikiSceneTypeRegulation {
+		return nil
+	}
+
+	// 筛选出条款页 slug
+	clauseSlugs := make([]string, 0, len(affectedSlugs))
+	for _, slug := range affectedSlugs {
+		if strings.HasPrefix(slug, "entity/clause-") {
+			clauseSlugs = append(clauseSlugs, slug)
+		}
+	}
+	if len(clauseSlugs) == 0 {
+		return nil
+	}
+
+	logger.Infof(ctx, "wiki clause quality: checking %d clause pages", len(clauseSlugs))
+
+	// 批量加载页面完整内容
+	type pageContent struct {
+		Slug    string
+		Title   string
+		Content string
+	}
+	var pages []pageContent
+	if s.db != nil {
+		type row struct {
+			Slug    string
+			Title   string
+			Content string
+		}
+		var rows []row
+		if err := s.db.WithContext(ctx).
+			Model(&types.WikiPage{}).
+			Select("slug", "title", "content").
+			Where("knowledge_base_id = ? AND slug IN ? AND status = ?",
+				kbID, clauseSlugs, types.WikiPageStatusPublished).
+			Scan(&rows).Error; err != nil {
+			logger.Warnf(ctx, "wiki clause quality: load pages failed: %v", err)
+			return nil
+		}
+		for _, r := range rows {
+			pages = append(pages, pageContent{Slug: r.Slug, Title: r.Title, Content: r.Content})
+		}
+	}
+	if len(pages) == 0 {
+		return nil
+	}
+
+	// 分批质检
+	const batchSize = 20 // 每批最多 20 个页面
+	var deletedSlugs []string
+
+	for i := 0; i < len(pages); i += batchSize {
+		end := i + batchSize
+		if end > len(pages) {
+			end = len(pages)
+		}
+		batch := pages[i:end]
+
+		// 构造 <pages> 内容：每个页面用 <page> 包裹
+		var pagesXML strings.Builder
+		for _, p := range batch {
+			// 内容截断：每个页面最多 2000 字符，避免 token 爆炸
+			content := p.Content
+			if len(content) > 2000 {
+				content = content[:2000] + "\n...（内容过长，已截断）"
+			}
+			fmt.Fprintf(&pagesXML, "<page slug=\"%s\" title=\"%s\">\n%s\n</page>\n\n",
+				p.Slug, p.Title, content)
+		}
+
+		// 调用 LLM
+		raw, err := s.generateWithTemplate(ctx, chatModel,
+			agent.WikiClauseQualityCheckPrompt, map[string]string{
+				"Pages": pagesXML.String(),
+			})
+		if err != nil {
+			logger.Warnf(ctx, "wiki clause quality: LLM call failed for batch %d-%d: %v",
+				i, end, err)
+			continue
+		}
+
+		// 提取首个 JSON 数组（容错：LLM 可能在 JSON 前后输出多余文字）
+		jsonStr := extractFirstJSONArray(raw)
+		if jsonStr == "" {
+			logger.Warnf(ctx, "wiki clause quality: failed to parse JSON from LLM output (len=%d)", len(raw))
+			continue
+		}
+
+		var results []clauseQualityCheckResult
+		if err := json.Unmarshal([]byte(jsonStr), &results); err != nil {
+			logger.Warnf(ctx, "wiki clause quality: JSON unmarshal failed: %v", err)
+			continue
+		}
+
+		// 处理结果：删除无效页面
+		for _, r := range results {
+			if r.IsValid {
+				continue
+			}
+			// 安全校验：只删条款页
+			if !strings.HasPrefix(r.Slug, "entity/clause-") {
+				continue
+			}
+			// 执行删除
+			if s.wikiService != nil {
+				if delErr := s.wikiService.DeletePage(ctx, kbID, r.Slug); delErr != nil {
+					logger.Warnf(ctx, "wiki clause quality: delete page %s failed: %v", r.Slug, delErr)
+					continue
+				}
+				deletedSlugs = append(deletedSlugs, r.Slug)
+				logger.Infof(ctx, "wiki clause quality: deleted invalid clause page %s (reason: %s)",
+					r.Slug, r.Reason)
+			}
+		}
+	}
+
+	logger.Infof(ctx, "wiki clause quality: checked %d pages, deleted %d invalid pages",
+		len(pages), len(deletedSlugs))
+	return deletedSlugs
+}
+
+// extractFirstJSONArray 从字符串中提取第一个完整的 JSON 数组（[ ... ]）。
+// 用于 LLM 输出在 JSON 前后有多余解释文字的情况。
+// 与 extractFirstJSONObject 类似，但匹配数组而非对象。
+func extractFirstJSONArray(s string) string {
+	s = strings.TrimSpace(s)
+	first := strings.Index(s, "[")
+	if first < 0 {
+		return ""
+	}
+	depth := 0
+	inString := false
+	escape := false
+	for i := first; i < len(s); i++ {
+		ch := s[i]
+		if escape {
+			escape = false
+			continue
+		}
+		if ch == '\\' && inString {
+			escape = true
+			continue
+		}
+		if ch == '"' {
+			inString = !inString
+			continue
+		}
+		if inString {
+			continue
+		}
+		if ch == '[' {
+			depth++
+			continue
+		}
+		if ch == ']' {
+			depth--
+			if depth == 0 {
+				return s[first : i+1]
+			}
+		}
+	}
+	return ""
+}

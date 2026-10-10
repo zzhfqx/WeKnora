@@ -168,10 +168,12 @@ func (s *wikiIngestService) newWikiBatchContext(
 	granularity := types.WikiExtractionStandard
 	contentInstructions := ""
 	extractionInstructions := ""
+	sceneType := types.WikiSceneTypeGeneric
 	if wikiConfig != nil {
 		granularity = wikiConfig.ExtractionGranularity.Normalize()
 		contentInstructions = wikiConfig.ContentInstructions
 		extractionInstructions = wikiConfig.ExtractionInstructions
+		sceneType = wikiConfig.SceneTypeOrDefault()
 	}
 	return &WikiBatchContext{
 		SlugTitle: func(ctx context.Context, slug string) string {
@@ -186,6 +188,7 @@ func (s *wikiIngestService) newWikiBatchContext(
 		ExtractionGranularity:  granularity,
 		ContentInstructions:    contentInstructions,
 		ExtractionInstructions: extractionInstructions,
+		SceneType:              sceneType,
 	}
 }
 
@@ -413,6 +416,9 @@ func (s *wikiIngestService) ProcessWikiIngest(ctx context.Context, t *asynq.Task
 	}
 
 	batchCtx := s.newWikiBatchContext(payload.KnowledgeBaseID, wikiConfig)
+
+	logger.Infof(ctx, "wiki ingest: scene_type=%q (wikiConfig_nil=%v)",
+		batchCtx.SceneType, wikiConfig == nil)
 
 	// 1. MAP PHASE (Parallel extraction and generation of updates)
 	var mapMu sync.Mutex
@@ -1070,7 +1076,7 @@ func (s *wikiIngestService) ProcessWikiFinalize(ctx context.Context, t *asynq.Ta
 		if mErr != nil {
 			logger.Warnf(ctx, "wiki finalize: get chat model failed: %v", mErr)
 		} else if err := s.rebuildIndexPage(ctx, chatModel, payload, changeDesc.String(), lang,
-			batchCtx.ContentInstructions); err != nil {
+			batchCtx.ContentInstructions, batchCtx.SceneType); err != nil {
 			logger.Warnf(ctx, "wiki finalize: rebuild index failed: %v", err)
 		} else {
 			indexRebuilt = true
@@ -1082,11 +1088,24 @@ func (s *wikiIngestService) ProcessWikiFinalize(ctx context.Context, t *asynq.Ta
 		s.injectCrossLinks(ctx, payload.KnowledgeBaseID, affectedSlugs, freshRefs, batchCtx)
 
 		// 抽取实体类页面之间的结构化语义关系
+		var qualityChatModel chat.Chat
 		if synthesisModelID != "" {
 			if chatModel, mErr := s.modelService.GetChatModel(ctx, synthesisModelID); mErr == nil {
 				s.generatePageRelations(ctx, payload.KnowledgeBaseID, payload.TenantID, affectedSlugs, chatModel)
+				qualityChatModel = chatModel // 复用模型做质量检查
 			} else {
 				logger.Warnf(ctx, "wiki finalize: get chat model for relation extraction failed: %v", mErr)
+			}
+		}
+
+		// 法规场景：LLM 质检条款页面，删除空壳/无效页面
+		// 放在关系生成之后、空目录清理之前（删除页面可能产生空目录，由后续 prune 处理）
+		if batchCtx.SceneType == types.WikiSceneTypeRegulation && qualityChatModel != nil {
+			deletedClauseSlugs := s.checkClausePageQuality(
+				ctx, payload.KnowledgeBaseID, affectedSlugs, qualityChatModel, batchCtx)
+			if len(deletedClauseSlugs) > 0 {
+				// 被删除的页面可能导致其他页面出现死链，再跑一次死链清理
+				s.cleanDeadLinks(ctx, payload.KnowledgeBaseID, affectedSlugs, batchCtx)
 			}
 		}
 	}
@@ -1096,9 +1115,13 @@ func (s *wikiIngestService) ProcessWikiFinalize(ctx context.Context, t *asynq.Ta
 	// creates folders before reduce writes pages, so an apparently-empty folder
 	// can still be owned by an in-flight batch. The durable prune rows stay in
 	// the finalize lane and are retried after the ingest lane drains.
+	//
+	// 新增文档时也做一次全量空目录检查：LLM 规划的目录可能最终没有页面挂入，
+	// 需要在所有 ingest 完成后清理掉。
 	pruneDeferred := false
 	deletedFolders := 0
-	if len(folderPruneIDs) > 0 {
+	needPrune := len(folderPruneIDs) > 0 || changeDesc.Len() > 0
+	if needPrune {
 		pending, pErr := s.pendingRepo.PendingCount(ctx, wikiTaskType, wikiTaskScope, payload.KnowledgeBaseID)
 		if pErr != nil {
 			logger.Warnf(ctx, "wiki finalize: cannot verify ingest drain before folder prune: %v", pErr)
@@ -1106,8 +1129,24 @@ func (s *wikiIngestService) ProcessWikiFinalize(ctx context.Context, t *asynq.Ta
 		} else if pending > 0 {
 			pruneDeferred = true
 		} else {
+			// 收集需要检查的文件夹：retract 相关的 + 全量扫描（有文档新增时）
+			pruneTargets := make([]string, len(folderPruneIDs))
+			copy(pruneTargets, folderPruneIDs)
+			if changeDesc.Len() > 0 && s.db != nil {
+				// 有文档新增时，扫描全量文件夹确保没有空目录残留
+				var allFolders []*types.WikiFolder
+				if listErr := s.db.WithContext(ctx).
+					Where("knowledge_base_id = ?", payload.KnowledgeBaseID).
+					Find(&allFolders).Error; listErr == nil {
+					for _, f := range allFolders {
+						if f != nil && f.ID != types.WikiFolderRootID {
+							pruneTargets = append(pruneTargets, f.ID)
+						}
+					}
+				}
+			}
 			deleted, pruneErr := s.wikiService.PruneEmptyFolderChains(
-				ctx, payload.KnowledgeBaseID, uniqueWikiFolderIDs(folderPruneIDs))
+				ctx, payload.KnowledgeBaseID, uniqueWikiFolderIDs(pruneTargets))
 			if pruneErr != nil {
 				logger.Warnf(ctx, "wiki finalize: prune empty folders failed: %v", pruneErr)
 				pruneDeferred = true
@@ -1281,10 +1320,86 @@ func (s *wikiIngestService) mapOneDocument(
 		"concepts_preview": previewExtractedItems(extractedConcepts, 8),
 	})
 
+	// ===== 法规场景：体系A专项提取 =====
+	// 在通用体系B之前运行，体系A的结果后续会与体系B合并。
+	// 如果是法规场景，同时生成：
+	//   1. 法规详情页（entity/regulation-xxx）
+	//   2. 法规精简摘要页（summary/<short-title>）
+	//   3. 制度性条款（entity/clause-xxx）
+	//   4. 核心业务对象（entity/<name>）
+	//
+	// 注意：法规精简摘要页不再在这里生成。
+	// 摘要页走通用 summary 生成机制，法规场景下使用 WikiRegulationSummaryPrompt（精简版）。
+	var (
+		regDetailContent string
+		regMeta          regulationDocMeta
+		regClauses       []extractedItem
+		regBusinessObjs  []extractedItem
+		regSlugItems     map[string]extractedItem
+		regExtracted     bool
+	)
+	if batchCtx.SceneType == types.WikiSceneTypeRegulation {
+		logger.Infof(ctx, "wiki ingest: regulation scene — generating regulation pages for %s", knowledgeID)
+
+		// Phase 1: 法规详情页生成（摘要式，整文处理）
+		regSpan := s.tracker().BeginSubSpan(ctx, wikiSpan, "postprocess.wiki.regulation.pages", types.SpanKindSubSpan, types.JSONMap{
+			"content_chars": utf8.RuneCountInString(content),
+		})
+		var regGenErr error
+		regDetailContent, regMeta, regGenErr = s.generateRegulationPages(
+			ctx, chatModel, content, lang, docTitle, batchCtx)
+		if regGenErr != nil {
+			logger.Warnf(ctx, "wiki ingest: regulation page generation failed for %s: %v", knowledgeID, regGenErr)
+			s.tracker().FailSpan(ctx, regSpan, "REG_PAGES_FAILED", regGenErr.Error(), regGenErr)
+		} else {
+			regExtracted = true
+			// short_title 兜底：LLM 偶尔可能返回空，用文档标题作为 fallback，
+			// 确保法规详情页一定能生成。
+			if regMeta.ShortTitle == "" {
+				regMeta.ShortTitle = docTitle
+				logger.Warnf(ctx, "wiki ingest: regulation short_title empty for %s, falling back to doc title", knowledgeID)
+			}
+			s.tracker().EndSpan(ctx, regSpan, types.JSONMap{
+				"short_title": regMeta.ShortTitle,
+				"doc_number":  regMeta.DocNumber,
+				"chapters":    regMeta.ChapterCount,
+				"articles":    regMeta.ArticleCount,
+			})
+		}
+
+		// Phase 2: 条款 + 业务对象提取（chunk级）
+		if regExtracted {
+			extractSpan := s.tracker().BeginSubSpan(ctx, wikiSpan, "postprocess.wiki.regulation.extract", types.SpanKindSubSpan, types.JSONMap{
+				"content_chars": utf8.RuneCountInString(content),
+				"old_pages":     len(oldPageSlugs),
+			})
+			var regExErr error
+			regClauses, regBusinessObjs, regSlugItems, regExErr = s.extractRegulationCandidateSlugs(
+				ctx, chatModel, payload.KnowledgeBaseID, content, lang, oldPageSlugs, batchCtx, docTitle)
+			if regExErr != nil {
+				logger.Warnf(ctx, "wiki ingest: regulation extraction failed for %s: %v", knowledgeID, regExErr)
+				s.tracker().FailSpan(ctx, extractSpan, "REG_EXTRACT_FAILED", regExErr.Error(), regExErr)
+			} else {
+				s.tracker().EndSpan(ctx, extractSpan, types.JSONMap{
+					"clauses":          len(regClauses),
+					"business_objects": len(regBusinessObjs),
+				})
+			}
+		}
+	}
+
 	// Build slug listing for Summary's wiki-link input.
+	// 法规场景下，同时包含体系A和体系B的slug。
 	var summaryExtractedPages []string
 	for slug := range slugItems {
 		summaryExtractedPages = append(summaryExtractedPages, slug)
+	}
+	if regSlugItems != nil {
+		for slug := range regSlugItems {
+			if _, exists := slugItems[slug]; !exists {
+				summaryExtractedPages = append(summaryExtractedPages, slug)
+			}
+		}
 	}
 	// Wiki summary slug is derived from the knowledge ID rather than the
 	// docTitle (which is typically the upload filename). Filename-based slugs
@@ -1292,9 +1407,15 @@ func (s *wikiIngestService) mapOneDocument(
 	// that downstream LLM prompts read; a UUID-based slug is uglier but
 	// hallucination-safe.
 	summarySlug := fmt.Sprintf("summary/%s", slugify(knowledgeID))
+
 	var slugListing string
 	for _, slug := range summaryExtractedPages {
-		if item, ok := slugItems[slug]; ok {
+		// 优先从体系A（法规场景）的 slugItems 中获取，再回退到体系B
+		item, ok := regSlugItems[slug]
+		if !ok {
+			item, ok = slugItems[slug]
+		}
+		if ok {
 			aliases := ""
 			if len(item.Aliases) > 0 {
 				aliases = fmt.Sprintf(" (Aliases: %s)", strings.Join(item.Aliases, ", "))
@@ -1303,6 +1424,12 @@ func (s *wikiIngestService) mapOneDocument(
 		} else {
 			slugListing += fmt.Sprintf("- [[%s]]\n", slug)
 		}
+	}
+
+	// 法规场景下，把法规详情页也加入 slugListing
+	if regExtracted && regMeta.ShortTitle != "" {
+		regDetailSlug := fmt.Sprintf("entity/regulation-%s", slugify(regMeta.ShortTitle))
+		slugListing += fmt.Sprintf("- [[%s]] = %s\n", regDetailSlug, regMeta.ShortTitle)
 	}
 
 	// Summary and chunk classification are independent given Pass 0 output —
@@ -1335,10 +1462,16 @@ func (s *wikiIngestService) mapOneDocument(
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		summaryContent, summaryErr = s.generateWithTemplate(ctx, chatModel, agent.WikiSummaryPrompt, map[string]string{
+		// 法规场景使用精简版摘要提示词，通用场景使用原版摘要提示词
+		summaryPrompt := agent.WikiSummaryPrompt
+		if batchCtx.SceneType == types.WikiSceneTypeRegulation {
+			summaryPrompt = agent.WikiRegulationSummaryPrompt
+		}
+		summaryContent, summaryErr = s.generateWithTemplate(ctx, chatModel, summaryPrompt, map[string]string{
 			"Content":            content,
 			"Language":           lang,
 			"ExtractedSlugs":     slugListing,
+			"DocTitle":           docTitle,
 			"CustomInstructions": batchCtx.ContentInstructions,
 			"InstructionScope":   "wiki_content",
 		})
@@ -1362,7 +1495,30 @@ func (s *wikiIngestService) mapOneDocument(
 			citations = map[string][]string{}
 			return
 		}
-		candidatesXML := renderCandidateSlugsXML(extractedEntities, extractedConcepts)
+		// 法规场景：把体系A的条款和业务对象也加入chunk引用分类
+		allEntities := extractedEntities
+		if regExtracted && (len(regClauses) > 0 || len(regBusinessObjs) > 0) {
+			allEntities = make([]extractedItem, 0, len(extractedEntities)+len(regClauses)+len(regBusinessObjs))
+			allEntities = append(allEntities, extractedEntities...)
+			// 去重：避免体系B和体系A的业务对象重复
+			seen := make(map[string]bool)
+			for _, e := range allEntities {
+				seen[e.Slug] = true
+			}
+			for _, c := range regClauses {
+				if !seen[c.Slug] {
+					allEntities = append(allEntities, c)
+					seen[c.Slug] = true
+				}
+			}
+			for _, bo := range regBusinessObjs {
+				if !seen[bo.Slug] {
+					allEntities = append(allEntities, bo)
+					seen[bo.Slug] = true
+				}
+			}
+		}
+		candidatesXML := renderCandidateSlugsXML(allEntities, extractedConcepts)
 		citations, newSlugs, batchCount = s.classifyChunkCitations(ctx, chatModel, candidatesXML, chunks, lang, batchCtx)
 		s.tracker().EndSpan(ctx, classifySpan, types.JSONMap{
 			"cited_slugs":      len(citations),
@@ -1378,6 +1534,28 @@ func (s *wikiIngestService) mapOneDocument(
 	// citations simply keep their Description+Details fallback).
 	var uncited int
 	extractedEntities, extractedConcepts, uncited = mergeCitationsIntoItems(extractedEntities, extractedConcepts, citations, newSlugs)
+
+	// 法规场景：把chunk引用回填到体系A的条款和业务对象中
+	if regExtracted {
+		for i := range regClauses {
+			if ids, ok := citations[regClauses[i].Slug]; ok {
+				regClauses[i].SourceChunks = ids
+			}
+		}
+		for i := range regBusinessObjs {
+			if ids, ok := citations[regBusinessObjs[i].Slug]; ok {
+				regBusinessObjs[i].SourceChunks = ids
+			}
+		}
+		// 同步更新 regSlugItems 中的引用
+		for slug, item := range regSlugItems {
+			if ids, ok := citations[slug]; ok {
+				item.SourceChunks = ids
+				regSlugItems[slug] = item
+			}
+		}
+	}
+
 	extractedEntities, extractedConcepts = s.reclaimExtractedIdentities(
 		ctx, payload.KnowledgeBaseID, extractedEntities, extractedConcepts, batchCtx,
 	)
@@ -1408,6 +1586,33 @@ func (s *wikiIngestService) mapOneDocument(
 			title = slug
 		}
 		extractedPages = append(extractedPages, wikiIngestPageRef{Slug: slug, Title: title})
+	}
+
+	// 法规场景：把体系A的页面也加入 extractedPages（用于retract对账和trace）
+	if regExtracted {
+		// 法规详情页
+		if regMeta.ShortTitle != "" {
+			regDetailSlug := fmt.Sprintf("entity/regulation-%s", slugify(regMeta.ShortTitle))
+			extractedPages = append(extractedPages, wikiIngestPageRef{Slug: regDetailSlug, Title: regMeta.ShortTitle})
+		}
+		// 条款和业务对象
+		for slug, item := range regSlugItems {
+			// 避免重复（如果体系B也提取了同一个）
+			found := false
+			for _, p := range extractedPages {
+				if p.Slug == slug {
+					found = true
+					break
+				}
+			}
+			if !found {
+				title := item.Name
+				if title == "" {
+					title = slug
+				}
+				extractedPages = append(extractedPages, wikiIngestPageRef{Slug: slug, Title: title})
+			}
+		}
 	}
 
 	// Count total distinct chunks cited across all slugs for logging.
@@ -1468,8 +1673,15 @@ func (s *wikiIngestService) mapOneDocument(
 	extractedPages = append(extractedPages, wikiIngestPageRef{Slug: summarySlug, Title: docTitle})
 
 	// Entities
+	// 法规场景：如果体系A（法规专项）已经提取了同一个业务对象，
+	// 体系B（通用提取）的同名实体跳过，以体系A为准（更专业、更法规化）。
 	for _, item := range extractedEntities {
 		if item.Slug != "" {
+			if regExtracted {
+				if _, covered := regSlugItems[item.Slug]; covered {
+					continue // 体系A已覆盖，跳过体系B的同名实体
+				}
+			}
 			updates = append(updates, SlugUpdate{
 				Slug:         item.Slug,
 				Type:         types.WikiPageTypeEntity,
@@ -1498,6 +1710,89 @@ func (s *wikiIngestService) mapOneDocument(
 				SourceChunks: item.SourceChunks,
 				DocSummary:   docSummary,
 			})
+		}
+	}
+
+	// ===== 法规场景：体系A结果追加到 updates =====
+	if regExtracted {
+		regDetailSlug := fmt.Sprintf("entity/regulation-%s", slugify(regMeta.ShortTitle))
+		regDetailTitle := regMeta.ShortTitle
+		regDetailLine, _ := splitSummaryLine(regDetailContent)
+
+		// 在摘要页末尾强制注入正确的法规详情页跳转链接。
+		// 不依赖 LLM 生成的跳转链接（LLM 可能猜错 short_title 或干脆不写，甚至写多个），
+		// 先清理掉所有旧的"查看完整法规详情"行，再注入正确的链接，确保只有一个且一定有效。
+		if regDetailContent != "" {
+			// 清理 LLM 生成的旧跳转行（包含"查看完整法规详情"的行全部删掉）
+			docSummary = removeRegulationJumpLines(docSummary)
+			// 注入正确的跳转链接
+			jumpLine := fmt.Sprintf("\n\n👉 **[[%s|查看完整法规详情]]**", regDetailSlug)
+			docSummary += jumpLine
+			// 同步更新 updates 中已添加的 summary 条目
+			for i := range updates {
+				if updates[i].Slug == summarySlug && updates[i].Type == types.WikiPageTypeSummary {
+					updates[i].SummaryBody = docSummary
+					break
+				}
+			}
+			logger.Infof(ctx, "wiki ingest: injected regulation detail link into summary — slug=%s", regDetailSlug)
+		}
+
+		// 1. 法规详情页（entity类型，"法规"目录下）
+		// 注意：short_title 兜底已在 regExtracted = true 时处理，这里一定非空
+		if regDetailContent != "" {
+			logger.Infof(ctx, "wiki ingest: adding regulation detail page — slug=%s, title=%s", regDetailSlug, regDetailTitle)
+			updates = append(updates, SlugUpdate{
+				Slug:         regDetailSlug,
+				Type:         types.WikiPageTypeEntity,
+				Item:         extractedItem{Name: regDetailTitle, Slug: regDetailSlug, Description: regDetailLine},
+				DocTitle:     docTitle,
+				KnowledgeID:  knowledgeID,
+				SourceRef:    sourceRef,
+				Language:     lang,
+				SourceChunks: nil, // 摘要式生成，无chunk级引用
+				DocSummary:   docSummary,
+				// 用 SummaryBody 传递法规详情页的完整内容
+				SummaryBody: regDetailContent,
+				SummaryLine: regDetailLine,
+			})
+		}
+
+		// 2. 制度性条款（entity类型）
+		for _, item := range regClauses {
+			if item.Slug != "" {
+				updates = append(updates, SlugUpdate{
+					Slug:         item.Slug,
+					Type:         types.WikiPageTypeEntity,
+					Item:         item,
+					DocTitle:     docTitle,
+					KnowledgeID:  knowledgeID,
+					SourceRef:    sourceRef,
+					Language:     lang,
+					SourceChunks: item.SourceChunks,
+					DocSummary:   docSummary,
+				})
+			}
+		}
+
+		// 3. 核心业务对象（entity类型）
+		// 注意：如果体系B（通用提取）也提取了同一个业务对象，
+		// 以体系A为准（体系A的内容更专业、更法规化）。
+		// 合并在 reduce 阶段处理，这里都追加到 updates。
+		for _, item := range regBusinessObjs {
+			if item.Slug != "" {
+				updates = append(updates, SlugUpdate{
+					Slug:         item.Slug,
+					Type:         types.WikiPageTypeEntity,
+					Item:         item,
+					DocTitle:     docTitle,
+					KnowledgeID:  knowledgeID,
+					SourceRef:    sourceRef,
+					Language:     lang,
+					SourceChunks: item.SourceChunks,
+					DocSummary:   docSummary,
+				})
+			}
 		}
 	}
 
@@ -1999,6 +2294,36 @@ func (s *wikiIngestService) reduceSlugUpdates(
 	}
 
 	if len(additions) > 0 || len(retracts) > 0 {
+		// 法规场景：法规详情页（entity/regulation-xxx）是摘要式生成的，
+		// 直接用新内容覆盖，不走 LLM 合并编辑。
+		// 单文档单法规，每篇文档对应一个法规详情页。
+		if batchCtx.SceneType == types.WikiSceneTypeRegulation &&
+			isRegulationRegulationSlug(slug) && len(additions) > 0 {
+			regAddition := additions[0] // 通常只有一个
+			if regAddition.SummaryBody != "" {
+				updatedSummary, updatedBody := splitSummaryLine(regAddition.SummaryBody)
+				if updatedBody != "" {
+					page.Content = updatedBody
+				} else {
+					page.Content = regAddition.SummaryBody
+				}
+				if updatedSummary != "" {
+					page.Summary = updatedSummary
+				}
+				if page.Title == "" {
+					page.Title = regAddition.Item.Name
+				}
+				if page.PageType == "" {
+					page.PageType = types.WikiPageTypeEntity
+				}
+				page.SourceRefs = appendUnique(page.SourceRefs, regAddition.SourceRef)
+				page.ChunkRefs = types.StringArray{} // 摘要式生成，无chunk引用
+				changed = true
+				// 跳转到统一保存逻辑，跳过 LLM 编辑路径
+				goto savePage
+			}
+		}
+
 		titles := batchCtx.SlugTitleMany(ctx, []string(page.OutLinks))
 
 		// slugHandles escape high-entropy slugs behind short reference handles
@@ -2057,7 +2382,9 @@ func (s *wikiIngestService) reduceSlugUpdates(
 		pageAliases := strings.Join(page.Aliases, ", ")
 
 		var updatedContent string
-		updatedContent, err = s.generateWithTemplate(ctx, chatModel, agent.WikiPageModifyUserPrompt, map[string]string{
+		// 根据场景类型和slug选择编辑模板
+		modifyPrompt := s.selectRegulationModifyPrompt(batchCtx.SceneType, slug)
+		updatedContent, err = s.generateWithTemplate(ctx, chatModel, modifyPrompt, map[string]string{
 			"HasAdditions":            hasAdditionsStr,
 			"HasRetractions":          hasRetractionsStr,
 			"PageSlug":                slug,
@@ -2112,6 +2439,7 @@ func (s *wikiIngestService) reduceSlugUpdates(
 	// or user-moved pages keep their placement (manual edits are authoritative).
 	// The page's category_path cache is derived from folder_id downstream by
 	// CreatePage/UpdatePage, so assigning the folder id is sufficient here.
+savePage:
 	if page.FolderID == "" && batchCtx != nil {
 		if fid := batchCtx.PlannedFolderID[slug]; fid != "" {
 			page.FolderID = fid

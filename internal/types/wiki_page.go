@@ -152,6 +152,18 @@ const (
 	WikiPageTypeComparison = "comparison"
 )
 
+// WikiSceneType 定义 Wiki 提取的场景模式。
+// "generic"（默认）= 标准实体/概念提取 + LLM动态分类目录。
+// "regulation" = 法规场景本体模式（法规/条款/业务对象 固定结构 + 通用提取并行运行）。
+const (
+	WikiSceneTypeGeneric    = "generic"    // 默认：标准实体/概念提取
+	WikiSceneTypeRegulation = "regulation" // 法规场景本体（双体系并行）
+)
+
+// RegulationFixedTopFolders 是法规场景保留的三个顶层目录名。
+// 通用LLM目录规划不会把页面分配到这些目录下，法规场景的页面按规则归入这些目录。
+var RegulationFixedTopFolders = []string{"法规", "条款", "业务对象"}
+
 // WikiPageStatus constants
 const (
 	// WikiPageStatusDraft indicates the page is a draft
@@ -573,6 +585,12 @@ type WikiConfig struct {
 	// this knob trades a single KB's peak throughput for cross-KB fairness.
 	// Set it >= the wiki pool size to effectively disable the cap.
 	IngestMaxInflight int `yaml:"ingest_max_inflight" json:"ingest_max_inflight,omitempty"`
+
+	// SceneType 控制 Wiki 提取场景模式。
+	//   - "generic"（默认）：标准实体/概念提取 + LLM动态分类目录
+	//   - "regulation"：法规场景本体（法规/条款/业务对象 固定结构
+	//     + 通用提取并行运行）
+	SceneType string `yaml:"scene_type" json:"scene_type,omitempty"`
 }
 
 // IngestBatchSizeOrDefault returns IngestBatchSize when set (> 0),
@@ -610,6 +628,21 @@ func (c *WikiConfig) IngestMaxInflightOrDefault(fallback int) int {
 		return fallback
 	}
 	return c.IngestMaxInflight
+}
+
+// SceneTypeOrDefault 返回 SceneType，未设置时默认返回 "regulation"（法规场景）。
+// 后续前端支持场景选择后，默认值改回 "generic"。
+func (c *WikiConfig) SceneTypeOrDefault() string {
+	if c == nil || c.SceneType == "" {
+		return WikiSceneTypeRegulation
+	}
+	return c.SceneType
+}
+
+// IsRegulationScene 判断该知识库是否使用法规场景本体提取模式
+// （双体系：固定 法规/条款/业务对象 + 通用提取并行）。
+func (c *WikiConfig) IsRegulationScene() bool {
+	return c.SceneTypeOrDefault() == WikiSceneTypeRegulation
 }
 
 // Value implements the driver.Valuer interface

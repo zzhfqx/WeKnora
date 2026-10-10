@@ -7,6 +7,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/Tencent/WeKnora/internal/agent"
 	"github.com/Tencent/WeKnora/internal/logger"
@@ -42,6 +43,13 @@ func (s *wikiIngestService) planBatchTaxonomy(
 	items := collectTaxonomyItems(slugUpdates)
 	if len(items) == 0 {
 		return nil
+	}
+
+	// ===== 法规场景：双体系目录规划 =====
+	// 体系A（法规场景）：规则式固定目录
+	// 体系B（通用提取）：LLM动态分类目录（复用现有逻辑，但注入保留目录名）
+	if kb.WikiConfig.IsRegulationScene() {
+		return s.planRegulationSceneTaxonomy(ctx, chatModel, kb, slugUpdates, items, lang)
 	}
 
 	// Existing folders anchor reuse. Errors (e.g. a dialect without the query)
@@ -107,6 +115,8 @@ func (s *wikiIngestService) planBatchTaxonomy(
 // assigns pre-resolved ids and never races two goroutines into creating the
 // same folder. Distinct paths are resolved once and cached. Blank paths (and
 // any resolution failure) map to the root and are simply omitted.
+// 法规场景下，三个固定顶层目录（法规/条款/业务对象）会被设置较小的 sort_order，
+// 确保它们始终置顶并按指定顺序排列。
 func (s *wikiIngestService) resolvePlannedFolders(
 	ctx context.Context, kb *types.KnowledgeBase, planned map[string][]string,
 ) map[string]string {
@@ -136,7 +146,45 @@ func (s *wikiIngestService) resolvePlannedFolders(
 			out[slug] = fid
 		}
 	}
+
+	// 法规场景：设置三个固定顶层目录的 sort_order，确保置顶并按指定顺序排列
+	// 法规=1, 条款=2, 业务对象=3，其他目录使用默认值(0或更高)排在后面
+	if kb.WikiConfig.IsRegulationScene() {
+		s.applyRegulationTopFolderSortOrder(ctx, kb, pathCache)
+	}
+
 	return out
+}
+
+// applyRegulationTopFolderSortOrder 设置法规场景三个固定顶层目录的排序权重。
+// 列表查询按 sort_order ASC, name ASC 排序，因此较小的值排前面。
+// 三个固定目录使用负值（-3/-2/-1），确保排在所有默认 sort_order=0 的目录之前。
+// 同时处理当前批次新创建的目录和历史已存在的目录。
+func (s *wikiIngestService) applyRegulationTopFolderSortOrder(
+	ctx context.Context, kb *types.KnowledgeBase, pathCache map[string]string,
+) {
+	if s.db == nil {
+		return
+	}
+	folderOrders := map[string]int{
+		"法规":     -3,
+		"条款":     -2,
+		"业务对象": -1,
+	}
+	now := time.Now()
+	for name, order := range folderOrders {
+		result := s.db.WithContext(ctx).
+			Model(&types.WikiFolder{}).
+			Where("knowledge_base_id = ? AND parent_id = ? AND name = ?",
+				kb.ID, types.WikiFolderRootID, name).
+			Updates(map[string]interface{}{
+				"sort_order": order,
+				"updated_at": now,
+			})
+		if result.Error != nil {
+			logger.Warnf(ctx, "wiki ingest: update sort_order for folder %q failed: %v", name, result.Error)
+		}
+	}
 }
 
 // selectRelevantFolders narrows the existing folder pool to the subset worth
@@ -261,6 +309,173 @@ func capFolders(paths [][]string, max int) [][]string {
 		return paths[:max]
 	}
 	return paths
+}
+
+// planRegulationSceneTaxonomy 为法规场景执行双体系目录规划：
+//   - 体系A（法规场景固定目录）：法规/条款/业务对象 三个顶层目录，规则式分配
+//   - 体系B（通用动态目录）：复用现有LLM规划逻辑，但注入保留目录名，
+//     确保通用LLM不会把页面分配到三个固定目录下
+func (s *wikiIngestService) planRegulationSceneTaxonomy(
+	ctx context.Context,
+	chatModel chat.Chat,
+	kb *types.KnowledgeBase,
+	slugUpdates map[string][]SlugUpdate,
+	allItems []wikiTaxonomyItem,
+	lang string,
+) map[string][]string {
+	result := make(map[string][]string, len(allItems))
+
+	// ===== Step 1: 体系A —— 规则式固定目录分配 =====
+	// 法规详情页 → "法规"
+	// 条款页 → "条款"
+	// 业务对象页 → "业务对象"
+	var genericItems []wikiTaxonomyItem
+	for _, it := range allItems {
+		slug := it.slug
+		switch {
+		case isRegulationRegulationSlug(slug):
+			result[slug] = []string{"法规"}
+		case isRegulationClauseSlug(slug):
+			result[slug] = []string{"条款"}
+		case isRegulationBusinessObjectSlug(slug):
+			result[slug] = []string{"业务对象"}
+		default:
+			// 体系B的页面，走LLM动态分类
+			genericItems = append(genericItems, it)
+		}
+	}
+
+	// 统计体系A各类页面数量
+	regCount, clauseCount, boCount := 0, 0, 0
+	for slug := range result {
+		switch {
+		case isRegulationRegulationSlug(slug):
+			regCount++
+		case isRegulationClauseSlug(slug):
+			clauseCount++
+		default:
+			boCount++
+		}
+	}
+	logger.Infof(ctx, "wiki taxonomy: regulation scene — 法规=%d, 条款=%d, 业务对象=%d, generic=%d",
+		regCount, clauseCount, boCount, len(genericItems))
+
+	// ===== Step 2: 体系B —— LLM动态分类目录（复用现有逻辑）=====
+	if len(genericItems) == 0 {
+		return result
+	}
+
+	// 加载现有目录池
+	var pool [][]string
+	if s.wikiService != nil {
+		paths, err := s.wikiService.ListDistinctCategoryPaths(ctx, kb.ID, wikiTaxonomyFolderPoolMax)
+		if err != nil {
+			logger.Warnf(ctx, "wiki ingest: list category paths for plan failed: %v", err)
+		} else {
+			pool = paths
+		}
+	}
+
+	// 过滤掉保留目录（法规/条款/业务对象），避免LLM把通用页面分到这些目录
+	filteredPool := filterReservedFolders(pool, types.RegulationFixedTopFolders)
+
+	existing := s.selectRelevantFolders(ctx, kb, genericItems, filteredPool)
+
+	// 构建保留目录提示文本
+	reservedFoldersText := buildReservedFoldersText(types.RegulationFixedTopFolders)
+
+	for start := 0; start < len(genericItems); start += wikiTaxonomyPlanChunkSize {
+		end := start + wikiTaxonomyPlanChunkSize
+		if end > len(genericItems) {
+			end = len(genericItems)
+		}
+		chunk := genericItems[start:end]
+
+		tree := formatExistingTaxonomyForPrompt(existing)
+		if strings.TrimSpace(tree) == "" {
+			tree = wikiTaxonomyEmptyTreeHint
+		}
+
+		var itemsBlock strings.Builder
+		for _, it := range chunk {
+			fmt.Fprintf(&itemsBlock, "- slug: %s | title: %s | type: %s | about: %s\n",
+				it.slug, it.title, it.pageType, previewText(it.about, 120))
+		}
+
+		raw, err := s.generateWithTemplate(ctx, chatModel, agent.WikiTaxonomyPlanPrompt, map[string]string{
+			"ExistingTaxonomy": tree,
+			"Items":            itemsBlock.String(),
+			"Language":         lang,
+			"ReservedFolders":  reservedFoldersText,
+		})
+		if err != nil {
+			logger.Warnf(ctx, "wiki ingest: regulation taxonomy plan call failed (%d items): %v", len(chunk), err)
+			continue
+		}
+
+		for slug, path := range parseTaxonomyAssignments(raw) {
+			clean := types.CleanWikiCategoryPath(path)
+			// 二次校验：确保通用页面不会被分到保留目录下
+			clean = sanitizePathAgainstReserved(clean, types.RegulationFixedTopFolders)
+			result[slug] = clean
+			if len(clean) > 0 {
+				existing = append(existing, clean) // 让后续的chunk复用
+			}
+		}
+	}
+
+	return result
+}
+
+// filterReservedFolders 从目录池中过滤掉保留目录及其子目录。
+// 确保LLM规划时看不到保留目录，不会尝试把通用页面分配到那里。
+func filterReservedFolders(pool [][]string, reserved []string) [][]string {
+	if len(reserved) == 0 {
+		return pool
+	}
+	reservedSet := make(map[string]bool, len(reserved))
+	for _, r := range reserved {
+		reservedSet[r] = true
+	}
+	filtered := make([][]string, 0, len(pool))
+	for _, path := range pool {
+		if len(path) == 0 {
+			filtered = append(filtered, path)
+			continue
+		}
+		if !reservedSet[path[0]] {
+			filtered = append(filtered, path)
+		}
+	}
+	return filtered
+}
+
+// buildReservedFoldersText 构建保留目录的提示文本，注入到taxonomy prompt中。
+func buildReservedFoldersText(reserved []string) string {
+	if len(reserved) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	sb.WriteString("以下目录名是系统保留目录，**绝对不能**把任何页面分配到这些目录下（包括不能使用这些名称作为顶层或子目录名）：\n")
+	for _, name := range reserved {
+		fmt.Fprintf(&sb, "- %s\n", name)
+	}
+	sb.WriteString("如果模型认为某个条目应该属于这些领域，请为其创建其他合适的分类目录名称。\n")
+	return sb.String()
+}
+
+// sanitizePathAgainstReserved 校验并清理路径，确保不会命中保留目录。
+// 如果路径的第一层是保留目录名，则置空（让页面落到根目录）。
+func sanitizePathAgainstReserved(path []string, reserved []string) []string {
+	if len(path) == 0 {
+		return path
+	}
+	for _, r := range reserved {
+		if path[0] == r {
+			return nil // 命中保留目录，置空
+		}
+	}
+	return path
 }
 
 // collectTaxonomyItems extracts the entity/concept pages from a batch's slug

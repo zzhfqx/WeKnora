@@ -94,24 +94,32 @@ stop_app() {
     pid=$(cat "$PID_FILE")
     log_info "正在停止进程 PID: $pid ..."
 
-    # 优雅停止
-    kill "$pid" 2>/dev/null || true
+    # 优雅停止（使用进程组 kill，确保 go run 的子进程也一起退出）
+    # go run 会启动实际的 server 子进程，只杀父进程会导致子进程残留
+    kill -- -$pid 2>/dev/null || kill "$pid" 2>/dev/null || true
 
-    # 等待进程退出
+    # 等待进程退出（检查主进程和端口占用）
     local waited=0
     local timeout=15
     while [ "$waited" -lt "$timeout" ]; do
         if ! kill -0 "$pid" 2>/dev/null; then
-            break
+            # 主进程已死，再检查端口是否也释放了
+            if command -v lsof &> /dev/null; then
+                if ! lsof -ti:"$APP_PORT" >/dev/null 2>&1; then
+                    break
+                fi
+            else
+                break
+            fi
         fi
         sleep 1
         waited=$((waited + 1))
     done
 
-    # 强制杀死
-    if kill -0 "$pid" 2>/dev/null; then
-        log_warning "进程未在 ${timeout}s 内退出，强制杀死..."
-        kill -9 "$pid" 2>/dev/null || true
+    # 强制杀死（进程组）
+    if kill -0 "$pid" 2>/dev/null || (command -v lsof &> /dev/null && lsof -ti:"$APP_PORT" >/dev/null 2>&1); then
+        log_warning "进程未在 ${timeout}s 内退出，强制杀死整个进程组..."
+        kill -9 -- -$pid 2>/dev/null || kill -9 "$pid" 2>/dev/null || true
         sleep 1
     fi
 

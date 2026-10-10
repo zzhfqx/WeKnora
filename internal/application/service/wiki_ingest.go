@@ -1354,6 +1354,11 @@ type WikiBatchContext struct {
 	// round-trip. Values are []*types.WikiPageLite, including empty slices
 	// for confirmed misses.
 	identityPages sync.Map
+
+	// SceneType 是本次批处理的 Wiki 提取场景模式。
+	// "generic"（默认）或 "regulation"。决定运行哪些提取路径，
+	// 以及如何选择目录规划 / 页面模板。
+	SceneType string
 }
 
 // SlugUpdate represents a single update operation for a specific slug
@@ -1898,6 +1903,13 @@ func (s *wikiIngestService) generatePageRelations(
 		return
 	}
 
+	// ===== 法规场景：确定性关系生成 =====
+	// from_document（条款 → 法规）关系是确定性的，不需要 LLM 判断。
+	// 先处理这部分，再继续走通用关系抽取。
+	if kb, _ := s.kbService.GetKnowledgeBaseByIDOnly(ctx, kbID); kb != nil && kb.WikiConfig.IsRegulationScene() {
+		s.generateFromDocumentRelations(ctx, kbID, tenantID, affectedSlugs)
+	}
+
 	// ---- Step 1: 收集候选关系对（受影响页面的 out_links 中指向实体/概念页的对） ----
 	type pairKey struct {
 		source string
@@ -2150,6 +2162,83 @@ func (s *wikiIngestService) generatePageRelations(
 	logger.Infof(ctx, "wiki relations: extracted %d new relations from %d pairs", len(newRelations), len(newPairs))
 }
 
+// generateFromDocumentRelations 为法规场景确定性生成 from_document 关系。
+// 条款页（entity/clause-xxx）的 out_links 中如果包含法规详情页
+// （entity/regulation-xxx），则生成一条 from_document 关系。
+// 这是确定性关系（置信度=1.0），不需要 LLM 判断。
+func (s *wikiIngestService) generateFromDocumentRelations(
+	ctx context.Context,
+	kbID string,
+	tenantID uint64,
+	affectedSlugs []string,
+) {
+	if s.wikiService == nil {
+		return
+	}
+
+	// 找出受影响的条款页
+	clauseSlugs := make([]string, 0)
+	for _, slug := range affectedSlugs {
+		if isRegulationClauseSlug(slug) {
+			clauseSlugs = append(clauseSlugs, slug)
+		}
+	}
+	if len(clauseSlugs) == 0 {
+		return
+	}
+
+	// 加载条款页，从 out_links 中找来源法规
+	pageMap, err := s.wikiService.ListBySlugs(ctx, kbID, clauseSlugs)
+	if err != nil {
+		logger.Warnf(ctx, "wiki relations: load clause pages for from_document failed: %v", err)
+		return
+	}
+
+	var relations []types.WikiPageRelation
+	for slug, page := range pageMap {
+		if page == nil {
+			continue
+		}
+		for _, outSlug := range page.OutLinks {
+			if isRegulationRegulationSlug(outSlug) {
+				relations = append(relations, types.WikiPageRelation{
+					ID:              uuid.New().String(),
+					TenantID:        tenantID,
+					KnowledgeBaseID: kbID,
+					SourceSlug:      slug,
+					TargetSlug:      outSlug,
+					RelationType:    "from_document",
+					RelationLabel:   "来自",
+					ReverseLabel:    "包含条款",
+					Description:     fmt.Sprintf("%s 来源于 %s", page.Title, outSlug),
+					Confidence:      1.0,
+					SourcePageType:  page.PageType,
+					TargetPageType:  types.WikiPageTypeEntity,
+					GeneratedBy:     types.WikiEditSourcePipeline,
+					Version:         1,
+				})
+				break // 一个条款通常只来自一部法规
+			}
+		}
+	}
+
+	if len(relations) == 0 {
+		return
+	}
+
+	// 批量写入（ON CONFLICT 忽略已存在的，幂等）
+	if err := s.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "knowledge_base_id"}, {Name: "source_slug"}, {Name: "target_slug"}},
+			DoNothing: true,
+		}).
+		Create(&relations).Error; err != nil {
+		logger.Warnf(ctx, "wiki relations: batch insert from_document relations failed: %v", err)
+		return
+	}
+	logger.Infof(ctx, "wiki relations: generated %d from_document relations (regulation scene)", len(relations))
+}
+
 // collectLinkRefs flattens (title + aliases) of all non-system pages into a
 // single linkRef slice suitable for linkifyContent.
 func collectLinkRefs(pages []*types.WikiPage) []linkRef {
@@ -2337,6 +2426,56 @@ type combinedExtraction struct {
 	Concepts []extractedItem `json:"concepts"`
 }
 
+// regulationDocMeta 法规文档的元数据，从法规页面生成LLM调用中解析出来。
+// 用于构造slug、页面标题、以及索引展示等。
+type regulationDocMeta struct {
+	DocNumber        string `json:"doc_number"`        // 文号
+	ShortTitle       string `json:"short_title"`       // 简称/短标题
+	IssuingAuthority string `json:"issuing_authority"` // 发布机关
+	IssueDate        string `json:"issue_date"`        // 发布日期
+	EffectiveDate    string `json:"effective_date"`    // 施行日期
+	Status           string `json:"status"`            // 现行状态
+	ChapterCount     int    `json:"chapter_count"`     // 章节数
+	ArticleCount     int    `json:"article_count"`     // 条款总数
+	IsPilot          bool   `json:"is_pilot"`          // 是否试点
+}
+
+// regulationExtractionResult 法规场景专项提取的完整输出。
+// 由 WikiRegulationExtractPrompt 解析而来，包含制度性条款和核心业务对象。
+type regulationExtractionResult struct {
+	Clauses         []extractedItem `json:"clauses"`          // 制度性条款（entity/clause-xxx）
+	BusinessObjects []extractedItem `json:"business_objects"` // 核心业务对象（entity/<name>）
+}
+
+// isRegulationBusinessObjectSlug 判断 slug 是否为法规场景的业务对象页。
+// 业务对象是 entity/ 前缀但既不是 regulation- 也不是 clause- 子前缀的页面。
+func isRegulationBusinessObjectSlug(slug string) bool {
+	if !strings.HasPrefix(slug, "entity/") {
+		return false
+	}
+	rest := strings.TrimPrefix(slug, "entity/")
+	return !strings.HasPrefix(rest, "regulation-") &&
+		!strings.HasPrefix(rest, "clause-")
+}
+
+// isRegulationClauseSlug 判断 slug 是否为法规场景的条款页（entity/clause-xxx）。
+func isRegulationClauseSlug(slug string) bool {
+	return strings.HasPrefix(slug, "entity/clause-")
+}
+
+// isRegulationRegulationSlug 判断 slug 是否为法规详情页（entity/regulation-xxx）。
+func isRegulationRegulationSlug(slug string) bool {
+	return strings.HasPrefix(slug, "entity/regulation-")
+}
+
+// isRegulationFixedEntitySlug 判断 slug 是否属于法规场景的固定目录实体页
+// （法规详情页 / 条款页 / 业务对象页）。
+func isRegulationFixedEntitySlug(slug string) bool {
+	return isRegulationRegulationSlug(slug) ||
+		isRegulationClauseSlug(slug) ||
+		isRegulationBusinessObjectSlug(slug)
+}
+
 // rebuildIndexPage refreshes the LLM-generated intro that sits on the
 // index wiki_pages row.
 //
@@ -2385,7 +2524,7 @@ const indexIntroSummaryCap = 200
 // The intro is written to both Content and Summary so legacy readers
 // that fall through to Summary stay in sync.
 func (s *wikiIngestService) rebuildIndexPage(ctx context.Context, chatModel chat.Chat, payload WikiIngestPayload,
-	changeDesc, lang, customInstructions string,
+	changeDesc, lang, customInstructions, sceneType string,
 ) error {
 	indexPage, _ := s.wikiService.GetIndex(ctx, payload.KnowledgeBaseID)
 	if indexPage == nil {
@@ -2439,11 +2578,18 @@ func (s *wikiIngestService) rebuildIndexPage(ctx context.Context, chatModel chat
 		if docSummaries.Len() == 0 {
 			docSummaries.WriteString("(no documents yet)")
 		}
-		generatedIntro, genErr := s.generateWithTemplate(ctx, chatModel, agent.WikiIndexIntroPrompt, map[string]string{
+		// 法规场景使用专用的索引页提示词
+		indexPrompt := agent.WikiIndexIntroPrompt
+		if sceneType == types.WikiSceneTypeRegulation {
+			indexPrompt = agent.WikiRegulationIndexIntroPrompt
+		}
+		generatedIntro, genErr := s.generateWithTemplate(ctx, chatModel, indexPrompt, map[string]string{
 			"DocumentSummaries":  framing + docSummaries.String(),
 			"Language":           lang,
 			"CustomInstructions": customInstructions,
 			"InstructionScope":   "wiki_content",
+			"ExistingIntro":      "",
+			"ChangeDescription":  "",
 		})
 		if genErr != nil {
 			intro = "# Wiki Index\n\nThis wiki contains knowledge extracted from uploaded documents.\n"
@@ -2856,7 +3002,7 @@ func (s *wikiIngestService) generateWithTemplate(ctx context.Context, chatModel 
 	logger.Infof(ctx, "[Wiki调试入参] ==================================")
 	// ========== 调试日志结束 ==========
 	messages := []chat.Message{{Role: "user", Content: prompt}}
-	if promptTpl == agent.WikiPageModifyUserPrompt {
+	if isWikiModifyPrompt(promptTpl) {
 		systemPrompt := types.AppendCustomPromptInstructions(
 			agent.WikiPageModifySystemPrompt,
 			maskedData["CustomInstructions"],
@@ -2886,7 +3032,7 @@ func (s *wikiIngestService) generateWithTemplate(ctx context.Context, chatModel 
 	// ========== 调试日志结束 ==========
 	prefixFingerprint := chat.PromptPrefixFingerprint(messages, opts)
 	warmupKey := ""
-	if promptTpl == agent.WikiPageModifyUserPrompt {
+	if isWikiModifyPrompt(promptTpl) {
 		prefixFingerprint = chat.FingerprintPromptPrefix(
 			messages[0].Content, maskedData["SharedSourceContexts"],
 		)
@@ -2910,7 +3056,7 @@ func (s *wikiIngestService) generateWithTemplate(ctx context.Context, chatModel 
 
 	execute := func() (interface{}, error) {
 		releaseWarmup := func() {}
-		if tenantScoped && promptTpl == agent.WikiPageModifyUserPrompt && strings.TrimSpace(maskedData["SharedSourceContexts"]) != "" {
+		if tenantScoped && isWikiModifyPrompt(promptTpl) && strings.TrimSpace(maskedData["SharedSourceContexts"]) != "" {
 			var warmupErr error
 			releaseWarmup, warmupErr = s.awaitWikiPromptWarmup(ctx, warmupKey)
 			if warmupErr != nil {
@@ -2991,23 +3137,52 @@ func wikiPromptPurpose(promptTpl string) string {
 	switch promptTpl {
 	case agent.WikiPageModifyUserPrompt:
 		return "wiki_page_modify"
+	case agent.WikiRegulationClauseModifyPrompt, agent.WikiRegulationBusinessObjectModifyPrompt:
+		return "wiki_page_modify" // 法规场景modify prompt 同样走 modify 流程
 	case agent.WikiChunkCitationPrompt:
 		return "wiki_chunk_citation"
 	case agent.WikiCandidateSlugPrompt:
 		return "wiki_candidate_slug"
-	case agent.WikiSummaryPrompt:
+	case agent.WikiSummaryPrompt, agent.WikiRegulationSummaryPrompt:
 		return "wiki_summary"
 	case agent.WikiKnowledgeExtractPrompt:
 		return "wiki_knowledge_extract"
+	case agent.WikiRegulationExtractPrompt:
+		return "wiki_regulation_extract"
+	case agent.WikiRegulationPageGenPrompt:
+		return "wiki_regulation_page_gen"
 	case agent.WikiTaxonomyPlanPrompt:
 		return "wiki_taxonomy_plan"
 	case agent.WikiDeduplicationPrompt:
 		return "wiki_deduplication"
 	case agent.WikiIndexIntroPrompt, agent.WikiIndexIntroUpdatePrompt:
 		return "wiki_index_intro"
+	case agent.WikiRegulationIndexIntroPrompt:
+		return "wiki_index_intro"
 	default:
 		return "wiki_generation"
 	}
+}
+
+// isWikiModifyPrompt 判断一个 prompt 模板是否属于"页面编辑/修改"类型。
+// 这类 prompt 需要特殊处理：system prompt、prefix fingerprint、prompt warmup。
+func isWikiModifyPrompt(promptTpl string) bool {
+	return wikiPromptPurpose(promptTpl) == "wiki_page_modify"
+}
+
+// selectRegulationModifyPrompt 根据场景类型和slug选择对应的页面编辑模板。
+// 法规场景下，条款页和业务对象页使用专用的编辑模板；
+// 其他情况（通用场景或普通实体/概念页）使用默认的 WikiPageModifyUserPrompt。
+func (s *wikiIngestService) selectRegulationModifyPrompt(sceneType string, slug string) string {
+	if sceneType == types.WikiSceneTypeRegulation {
+		switch {
+		case isRegulationClauseSlug(slug):
+			return agent.WikiRegulationClauseModifyPrompt
+		case isRegulationBusinessObjectSlug(slug):
+			return agent.WikiRegulationBusinessObjectModifyPrompt
+		}
+	}
+	return agent.WikiPageModifyUserPrompt
 }
 
 func (s *wikiIngestService) awaitWikiPromptWarmup(ctx context.Context, key string) (func(), error) {
